@@ -103,6 +103,76 @@ update_repositories() {
     apt update && apt upgrade -y && apt autoremove && apt autoclean
 }
 
+# Function to install Minecraft PE Server
+install_minecraft_pe_server() {
+    echo "Installing Minecraft PE Server..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
+        if [ "$docker_choice" == "y" ]; then
+            install_docker
+        else
+            echo "Docker is not installed. Please install Docker first."
+            return
+        fi
+    fi
+
+    # Create a directory for the Minecraft PE server
+    minecraft_dir="/root/minecraft"
+    mkdir -p $minecraft_dir
+
+    # Ask for a custom container name or use default
+    read -p "Enter a container name (default: mc01): " container_name
+    container_name=${container_name:-"mc01"}
+
+    # Ask for server port
+    read -p "Enter server port (default: 20001): " server_port
+    server_port=${server_port:-"20001"}
+
+    # Ask for difficulty level
+    read -p "Enter difficulty level (easy/normal/hard): " difficulty
+    difficulty=${difficulty:-"normal"}
+
+    # Ask for level seed (leave blank for default)
+    read -p "Enter level seed (leave blank for default): " level_seed
+
+    # Create a Docker Compose file
+    cat <<EOF > $minecraft_dir/docker-compose.yml
+version: '3'
+services:
+  minecraft-bedrock-server:
+    image: itzg/minecraft-bedrock-server
+    container_name: $container_name
+    environment:
+      - EULA=TRUE
+      - SERVER_PORT=$server_port
+      - DIFFICULTY=$difficulty
+EOF
+
+    if [ -n "$level_seed" ]; then
+        echo "      - LEVEL_SEED=$level_seed" >> $minecraft_dir/docker-compose.yml
+    fi
+
+    # Append the rest of the Docker Compose file
+    cat <<EOF >> $minecraft_dir/docker-compose.yml
+    ports:
+      - "$server_port:$server_port/udp"
+    volumes:
+      - $container_name:/data
+
+volumes:
+  $container_name:
+EOF
+
+    # Start the Minecraft PE server
+    cd $minecraft_dir
+    docker-compose up -d
+
+    echo "Minecraft PE Server has been installed and started."
+}
+
+
 
 # Main menu
 main_menu() {
