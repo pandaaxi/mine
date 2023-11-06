@@ -195,7 +195,7 @@ main_menu() {
         echo "4: Update Repositories"
         echo "5: Minecraft PE Server"
         echo "0: Quit"
-        echo "00: Upd"
+        echo "00: Update"
 
         read -p "Enter your choice: " choice
 
