@@ -92,13 +92,25 @@ update_script() {
     echo "Script updated successfully."
 }
 
+# Function for SSL Cert Management
+ssl_cert_management() {
+    echo "Running SSL Cert Management script..."
+    bash <(curl -L -s https://gitlab.com/rwkgyg/acme-script/raw/main/acme.sh)
+}
+
+# Function to update repositories
+update_repositories() {
+    apt update && apt upgrade -y && apt autoremove && apt autoclean
+}
+
 
 # Main loop
 while true; do
     echo "Select an option:"
     echo "1: Install Docker"
     echo "2: Marzban"
-    echo "3: Update script"
+    echo "3: SSL Cert Management"
+    echo "4: Update Repositories"
     echo "0: Quit"
     
     read -p "Enter your choice: " choice
@@ -146,7 +158,8 @@ while true; do
                 esac
             done
             ;;
-        3) update_script ;;
+        3) ssl_cert_management ;;
+        4) update_repositories ;;
         0)
             echo "Exiting..."
             exit 0
