@@ -112,7 +112,7 @@ while true; do
     echo "3: SSL Cert Management"
     echo "4: Update Repositories"
     echo "0: Quit"
-    
+
     read -p "Enter your choice: " choice
 
     case $choice in
@@ -125,9 +125,9 @@ while true; do
                 echo "3: Display SSL certificate (Node)"
                 echo "4: Uninstall Marzban"
                 echo "0: Back to main menu"
-                
+
                 read -p "Enter your choice: " sub_choice
-                
+
                 case $sub_choice in
                     1) install_marzban_panel ;;
                     2) install_marzban_node ;;
@@ -140,9 +140,9 @@ while true; do
                             echo "3: Uninstall all Marzban components"
                             echo "0: Back to Marzban menu"
                             echo "00: Back to main menu"
-                            
+
                             read -p "Enter your choice: " uninstall_choice
-                            
+
                             case $uninstall_choice in
                                 1) uninstall_marzban_panel ;;
                                 2) uninstall_marzban_node ;;
@@ -151,11 +151,21 @@ while true; do
                                 00) break 2 ;;
                                 *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
                             esac
+                            read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+                            if [ "$input" == "q" ]; then
+                                echo "Exiting..."
+                                exit 0
+                            fi
                         done
                         ;;
                     0) break ;;
                     *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
                 esac
+                read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+                if [ "$input" == "q" ]; then
+                    echo "Exiting..."
+                    exit 0
+                fi
             done
             ;;
         3) ssl_cert_management ;;
@@ -165,6 +175,11 @@ while true; do
             exit 0
             ;;
         *)
-            echo "Invalid option. Please choose a valid option." ;;
+            echo "Invalid option. Please choose a valid option."
     esac
+    read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+    if [ "$input" == "q" ]; then
+        echo "Exiting..."
+        exit 0
+    fi
 done
