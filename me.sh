@@ -91,14 +91,15 @@ update_script() {
 
     # Download the updated script
     updated_script_url="https://raw.githubusercontent.com/vblyrpv074/mine/main/me.sh"
-    if curl -fsSL -o updated_me.sh "$updated_script_url"; then
-        mv -f updated_me.sh me.sh
+    if curl -fsSL -o me.sh "$updated_script_url"; then
         chmod +x me.sh
         echo "Script updated successfully."
+        exit 0  # Exit after updating to avoid any issues
     else
         echo "Failed to update the script. Please check the provided link."
     fi
 }
+
 
 # Function for SSL Cert Management
 ssl_cert_management() {
