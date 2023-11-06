@@ -170,8 +170,10 @@ EOF
     docker-compose up -d
 
     echo "Minecraft PE Server has been installed and started."
+    echo "Server Port: $server_port"
+    echo "Difficulty: $difficulty"
+    echo "Container Name: $container_name"
 }
-
 
 
 # Main menu
