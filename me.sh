@@ -1,11 +1,12 @@
 #!/bin/bash
 
+# Function script
 # Function to install Docker
 install_docker() {
     echo "Installing Docker..."
     if ! command -v docker &> /dev/null; then
         # Update and upgrade the system
-        apt update && apt upgrade -y and apt autoclean -y
+        apt update && apt upgrade -y && apt autoclean -y
 
         # Install Docker using the official script
         curl -fsSL https://get.docker.com | sh
@@ -185,7 +186,7 @@ edit_minecraft_pe_server() {
     if [ -z "$server_list" ]; then
         echo "No Minecraft PE Servers are currently running."
         return
-    }
+    fi
 
     # Prompt for server selection if there are multiple servers
     if [ $(echo "$server_list" | wc -l) -gt 1 ]; then
@@ -203,18 +204,23 @@ edit_minecraft_pe_server() {
     # Ask for a new difficulty level
     read -p "Enter a new difficulty level (easy/normal/hard, leave blank to keep the current difficulty): " new_difficulty
 
+    # Get the current difficulty from the Docker Compose file
+    difficulty=$(grep -oP "(?<=DIFFICULTY=)\w+" "/root/minecraft/$server_name/docker-compose.yml")
+
     # Edit the Docker Compose file for the selected server
     docker_compose_file="/root/minecraft/$server_name/docker-compose.yml"
     sed -i -e "/container_name: $server_name/,/DIFFICULTY=/s/SERVER_PORT=[0-9]*/SERVER_PORT=${new_server_port:-$server_port}/" \
-           -e "/container_name: $server_name/,/LEVEL_SEED=/s/DIFFICULTY=\w*/DIFFICULTY=${new_difficulty:-$difficulty}/" \
+           -e "/container_name: $server_name/,/LEVEL_SEED=/s/DIFFICULTY=$difficulty/DIFFICULTY=${new_difficulty:-$difficulty}/" \
            $docker_compose_file
 
     # Restart the selected Minecraft server
-    cd /root/minecraft/$server_name
+    cd "/root/minecraft/$server_name"
     docker-compose restart
 
     echo "Minecraft PE Server configuration has been updated."
 }
+
+
 
 # Function to enable coordinates in a Minecraft PE Server
 enable_coordinates() {
@@ -243,6 +249,8 @@ enable_coordinates() {
 
     echo "Coordinates have been enabled in the selected Minecraft PE Server."
 }
+
+
 
 # Main menu
 main_menu() {
@@ -278,6 +286,8 @@ main_menu() {
 }
 
 
+
+# Sub Menu
 # Sub-menu for Marzban options
 marzban_submenu() {
     while true; do
