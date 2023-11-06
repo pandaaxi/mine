@@ -115,6 +115,7 @@ update_repositories() {
 
 # Function to install Minecraft PE Server
 install_minecraft_pe_server() {
+    
     echo "Installing Minecraft PE Server..."
 
     # Check if Docker is installed
@@ -128,8 +129,30 @@ install_minecraft_pe_server() {
         fi
     fi
 
-    # Ask for the server name (container name)
-    read -p "Enter the server name (container name, e.g., mc01): " server_name
+    # Ask if the user wants to modify server configuration
+    read -p "Do you want to modify the server configuration? (y/n, default: n): " modify_config_choice
+
+    if [ "$modify_config_choice" == "y" ]; then
+        # Ask for the server name (container name)
+        read -p "Enter the server name (container name, e.g., mc01, leave blank for default): " server_name
+        server_name=${server_name:-"mc01"}
+
+        # Ask for the server port
+        read -p "Enter the server port (leave blank for default, default: 20001): " server_port
+        server_port=${server_port:-20001}
+
+        # Ask for the difficulty level
+        read -p "Enter the difficulty level (easy/normal/hard, leave blank for default, default: normal): " difficulty
+        difficulty=${difficulty:-"normal"}
+
+        # Ask for the level seed
+        read -p "Enter the level seed (leave blank for none): " level_seed
+    else
+        server_name="mc01"
+        server_port="20001"
+        difficulty="normal"
+        level_seed=""
+    fi
 
     # Create a directory for the Minecraft server
     mkdir -p "/root/minecraft/$server_name"
@@ -143,11 +166,19 @@ services:
     container_name: $server_name
     environment:
       - EULA=TRUE
-      - SERVER_PORT=19132
-      - DIFFICULTY=normal
-      - LEVEL_SEED=
+      - SERVER_PORT=$server_port
+      - DIFFICULTY=$difficulty
+EOF
+
+    # Add the level seed if provided
+    if [ -n "$level_seed" ]; then
+        echo "      - LEVEL_SEED=$level_seed" >> "/root/minecraft/$server_name/docker-compose.yml"
+    fi
+
+    # Add the rest of the configuration
+    cat <<EOF >> "/root/minecraft/$server_name/docker-compose.yml"
     ports:
-      - "19132:19132/udp"
+      - "$server_port:$server_port/udp"
     volumes:
       - $server_name:/data
 
@@ -161,9 +192,14 @@ EOF
 
     # Print server information
     echo "Minecraft PE Server '$server_name' has been installed."
-    echo "Server Port: 19132"
-    echo "Difficulty: normal"
+    echo "Server Port: $server_port"
+    echo "Difficulty: $difficulty"
+    [ -n "$level_seed" ] && echo "Level Seed: $level_seed"
+
 }
+
+
+
 
 # Function to edit port and difficulty of the Minecraft PE Server
 edit_minecraft_pe_server() {
