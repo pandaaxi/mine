@@ -5,7 +5,7 @@ install_docker() {
     echo "Installing Docker..."
     if ! command -v docker &> /dev/null; then
         # Update and upgrade the system
-        apt update && apt upgrade -y && apt autoclean -y
+        apt update && apt upgrade -y and apt autoclean -y
 
         # Install Docker using the official script
         curl -fsSL https://get.docker.com | sh
@@ -56,7 +56,27 @@ display_ssl_certificate() {
 # Function to install Marzban Panel
 install_marzban_panel() {
     echo "Installing Marzban Panel..."
-    apt update && apt upgrade -y && sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
+    apt update && apt upgrade -y and sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
+}
+
+# Function to uninstall Marzban Panel
+uninstall_marzban_panel() {
+    echo "Uninstalling Marzban Panel..."
+    # Add the uninstall script for Marzban Panel
+    # marzban uninstall
+}
+
+# Function to uninstall Marzban Node
+uninstall_marzban_node() {
+    echo "Uninstalling Marzban Node..."
+    cd && cd Marzban-node && docker compose down -v && cd && rm -rf Marzban-node && rm -r /var/lib/marzban-node
+}
+
+# Function to uninstall all Marzban components
+uninstall_all_marzban() {
+    echo "Uninstalling all Marzban components..."
+    # Add the script to uninstall all Marzban components
+    # This should include uninstalling both Marzban Panel and Marzban Node
 }
 
 # Main loop
@@ -76,6 +96,7 @@ while true; do
                 echo "1: Install Marzban Panel"
                 echo "2: Install Marzban Node"
                 echo "3: Display SSL certificate (Node)"
+                echo "4: Uninstall Marzban"
                 echo "0: Back to main menu"
                 
                 read -p "Enter your choice: " sub_choice
@@ -84,8 +105,29 @@ while true; do
                     1) install_marzban_panel ;;
                     2) install_marzban_node ;;
                     3) display_ssl_certificate ;;
-                    0) break ;; # Return to the main menu
-                    *) echo "Invalid sub-option. Please choose a valid sub-option (1, 2, 3, or 0)." ;;
+                    4)
+                        while true; do
+                            echo "Uninstall Marzban Sub-Options:"
+                            echo "1: Uninstall Marzban Panel"
+                            echo "2: Uninstall Marzban Node"
+                            echo "3: Uninstall all Marzban components"
+                            echo "0: Back to Marzban menu"
+                            echo "00: Back to main menu"
+                            
+                            read -p "Enter your choice: " uninstall_choice
+                            
+                            case $uninstall_choice in
+                                1) uninstall_marzban_panel ;;
+                                2) uninstall_marzban_node ;;
+                                3) uninstall_all_marzban ;;
+                                0) break ;;
+                                00) break 2 ;;
+                                *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+                            esac
+                        done
+                        ;;
+                    0) break ;;
+                    *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
                 esac
             done
             ;;
@@ -94,7 +136,6 @@ while true; do
             exit 0
             ;;
         *)
-            echo "Invalid option. Please choose a valid option (1, 2, or 0)."
-            ;;
+            echo "Invalid option. Please choose a valid option." ;;
     esac
 done
