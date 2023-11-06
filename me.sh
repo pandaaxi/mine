@@ -327,6 +327,7 @@ main_menu() {
 # Sub-menu for Marzban options
 marzban_submenu() {
     while true; do
+        clear  
         echo "Marzban Sub-Options:"
         echo "1: Install Marzban Panel"
         echo "2: Install Marzban Node"
@@ -356,6 +357,7 @@ marzban_submenu() {
 # Sub-menu for Marzban uninstall options
 uninstall_marzban_submenu() {
     while true; do
+        clear  
         echo "Uninstall Marzban Sub-Options:"
         echo "1: Uninstall Marzban Panel"
         echo "2: Uninstall Marzban Node"
@@ -385,6 +387,7 @@ uninstall_marzban_submenu() {
 # Sub-menu for Minecraft PE Server
 minecraft_pe_server_submenu() {
     while true; do
+        clear  
         echo "Minecraft PE Server Sub-Options:"
         echo "1: Install Minecraft Server"
         echo "2: Edit Port and Difficulty"
