@@ -184,40 +184,6 @@ EOF
     echo "Container Name: $container_name"
 }
 
-
-# Main menu
-main_menu() {
-    while true; do
-        echo "Select an option:"
-        echo "1: Install Docker"
-        echo "2: Marzban"
-        echo "3: SSL Cert Management"
-        echo "4: Update Repositories"
-        echo "5: Minecraft PE Server"
-        echo "0: Quit"
-        echo "00: Update"
-
-        read -p "Enter your choice: " choice
-
-        case $choice in
-            1) install_docker ;;
-            2) marzban_submenu ;;
-            3) ssl_cert_management ;;
-            4) update_repositories ;;
-            5) minecraft_pe_server_submenu ;;
-            0) quit_script ;;
-            00) update_script ;;
-            *) echo "Invalid option. Please choose a valid option." ;;
-        esac
-
-        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            echo "Exiting..."
-            exit 0
-        fi
-    done
-}
-
 # Function to edit port and difficulty of the Minecraft PE Server
 edit_minecraft_pe_server() {
     echo "Editing Minecraft PE Server Port and Difficulty..."
@@ -296,6 +262,39 @@ enable_coordinates() {
     docker exec $server_name send-command gamerule showcoordinates true
 
     echo "Coordinates have been enabled in the selected Minecraft PE Server."
+}
+
+# Main menu
+main_menu() {
+    while true; do
+        echo "Select an option:"
+        echo "1: Install Docker"
+        echo "2: Marzban"
+        echo "3: SSL Cert Management"
+        echo "4: Update Repositories"
+        echo "5: Minecraft PE Server"
+        echo "0: Quit"
+        echo "00: Update"
+
+        read -p "Enter your choice: " choice
+
+        case $choice in
+            1) install_docker ;;
+            2) marzban_submenu ;;
+            3) ssl_cert_management ;;
+            4) update_repositories ;;
+            5) minecraft_pe_server_submenu ;;
+            0) quit_script ;;
+            00) update_script ;;
+            *) echo "Invalid option. Please choose a valid option." ;;
+        esac
+
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
 }
 
 
