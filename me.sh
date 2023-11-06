@@ -44,6 +44,9 @@ install_marzban_node() {
 
         # Start the Docker Compose service
         docker compose up -d
+
+        #SSL
+        cat /var/lib/marzban-node/ssl_cert.pem
     fi
 }
 
