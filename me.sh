@@ -104,84 +104,125 @@ update_repositories() {
 }
 
 
-# Main loop
-while true; do
-    echo "Select an option:"
-    echo "1: Install Docker"
-    echo "2: Marzban"
-    echo "3: SSL Cert Management"
-    echo "4: Update Repositories"
-    echo "0: Quit"
-    echo "00: Update"
+# Main menu
+main_menu() {
+    while true; do
+        echo "Select an option:"
+        echo "1: Install Docker"
+        echo "2: Marzban"
+        echo "3: SSL Cert Management"
+        echo "4: Update Repositories"
+        echo "5: Minecraft PE Server"
+        echo "0: Quit"
+        echo "00: Update"
 
-    read -p "Enter your choice: " choice
+        read -p "Enter your choice: " choice
 
-    case $choice in
-        1) install_docker ;;
-        2)
-            while true; do
-                echo "Marzban Sub-Options:"
-                echo "1: Install Marzban Panel"
-                echo "2: Install Marzban Node"
-                echo "3: Display SSL certificate (Node)"
-                echo "4: Uninstall Marzban"
-                echo "0: Back to main menu"
+        case $choice in
+            1) install_docker ;;
+            2) marzban_submenu ;;
+            3) ssl_cert_management ;;
+            4) update_repositories ;;
+            5) minecraft_pe_server_submenu ;;
+            0) quit_script ;;
+            00) update_script ;;
+            *) echo "Invalid option. Please choose a valid option." ;;
+        esac
 
-                read -p "Enter your choice: " sub_choice
-
-                case $sub_choice in
-                    1) install_marzban_panel ;;
-                    2) install_marzban_node ;;
-                    3) display_ssl_certificate ;;
-                    4)
-                        while true; do
-                            echo "Uninstall Marzban Sub-Options:"
-                            echo "1: Uninstall Marzban Panel"
-                            echo "2: Uninstall Marzban Node"
-                            echo "3: Uninstall all Marzban components"
-                            echo "0: Back to Marzban menu"
-                            echo "00: Back to main menu"
-
-                            read -p "Enter your choice: " uninstall_choice
-
-                            case $uninstall_choice in
-                                1) uninstall_marzban_panel ;;
-                                2) uninstall_marzban_node ;;
-                                3) uninstall_all_marzban ;;
-                                0) break ;;
-                                00) break 2 ;;
-                                *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-                            esac
-                            read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-                            if [ "$input" == "q" ]; then
-                                echo "Exiting..."
-                                exit 0
-                            fi
-                        done
-                        ;;
-                    0) break ;;
-                    *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-                esac
-                read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-                if [ "$input" == "q" ]; then
-                    echo "Exiting..."
-                    exit 0
-                fi
-            done
-            ;;
-        3) ssl_cert_management ;;
-        4) update_repositories ;;
-        0)
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
             echo "Exiting..."
             exit 0
-            ;;
-        00) update_script ;;
-        *)
-            echo "Invalid option. Please choose a valid option."
-    esac
-    read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-    if [ "$input" == "q" ]; then
-        echo "Exiting..."
-        exit 0
-    fi
-done
+        fi
+    done
+}
+
+# Sub-menu for Marzban options
+marzban_submenu() {
+    while true; do
+        echo "Marzban Sub-Options:"
+        echo "1: Install Marzban Panel"
+        echo "2: Install Marzban Node"
+        echo "3: Display SSL certificate (Node)"
+        echo "4: Uninstall Marzban"
+        echo "0: Back to main menu"
+
+        read -p "Enter your choice: " sub_choice
+
+        case $sub_choice in
+            1) install_marzban_panel ;;
+            2) install_marzban_node ;;
+            3) display_ssl_certificate ;;
+            4) uninstall_marzban_submenu ;;
+            0) break ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
+}
+
+# Sub-menu for Marzban uninstall options
+uninstall_marzban_submenu() {
+    while true; do
+        echo "Uninstall Marzban Sub-Options:"
+        echo "1: Uninstall Marzban Panel"
+        echo "2: Uninstall Marzban Node"
+        echo "3: Uninstall all Marzban components"
+        echo "0: Back to Marzban menu"
+        echo "00: Back to main menu"
+
+        read -p "Enter your choice: " uninstall_choice
+
+        case $uninstall_choice in
+            1) uninstall_marzban_panel ;;
+            2) uninstall_marzban_node ;;
+            3) uninstall_all_marzban ;;
+            0) break ;;
+            00) break 2 ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
+}
+
+# Sub-menu for Minecraft PE Server
+minecraft_pe_server_submenu() {
+    while true; do
+        echo "Minecraft PE Server Sub-Options:"
+        echo "1: Install Minecraft PE Server"
+        echo "0: Back to main menu"
+
+        read -p "Enter your choice: " minecraft_pe_choice
+
+        case $minecraft_pe_choice in
+            1) install_minecraft_pe_server ;;
+            0) break ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
+}
+
+# Function to quit the script
+quit_script() {
+    echo "Exiting..."
+    exit 0
+}
+
+# Start the main menu
+main_menu
