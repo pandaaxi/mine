@@ -291,6 +291,7 @@ enable_coordinates() {
 # Main menu
 main_menu() {
     while true; do
+        clear
         echo "Select an option:"
         echo "1: Install Docker"
         echo "2: Marzban"
