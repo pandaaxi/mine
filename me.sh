@@ -218,6 +218,87 @@ main_menu() {
     done
 }
 
+# Function to edit port and difficulty of the Minecraft PE Server
+edit_minecraft_pe_server() {
+    echo "Editing Minecraft PE Server Port and Difficulty..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
+        if [ "$docker_choice" == "y" ]; then
+            install_docker
+        else
+            echo "Docker is not installed. Please install Docker first."
+            return
+        fi
+    fi
+
+    # List the available Minecraft servers
+    server_list=$(docker ps --format "{{.Names}}" | grep 'minecraft-bedrock-server')
+
+    if [ -z "$server_list" ]; then
+        echo "No Minecraft PE Servers are currently running."
+        return
+    fi
+
+    # Prompt for server selection if there are multiple servers
+    if [ $(echo "$server_list" | wc -l) -gt 1 ]; then
+        echo "Select the server to edit port and difficulty:"
+        select server_name in $server_list; do
+            [ -n "$server_name" ] && break
+        done
+    else
+        server_name="$server_list"
+    fi
+
+    # Ask for a new server port
+    read -p "Enter a new server port (leave blank to keep the current port): " new_server_port
+
+    # Ask for a new difficulty level
+    read -p "Enter a new difficulty level (easy/normal/hard, leave blank to keep the current difficulty): " new_difficulty
+
+    # Edit the Docker Compose file for the selected server
+    docker_compose_file="/root/minecraft/docker-compose.yml"
+    sed -i -e "/container_name: $server_name/,/DIFFICULTY=/s/SERVER_PORT=[0-9]*/SERVER_PORT=${new_server_port:-$server_port}/" \
+           -e "/container_name: $server_name/,/LEVEL_SEED=/s/DIFFICULTY=\w*/DIFFICULTY=${new_difficulty:-$difficulty}/" \
+           $docker_compose_file
+
+    # Restart the selected Minecraft server
+    cd /root/minecraft
+    docker-compose restart $server_name
+
+    echo "Minecraft PE Server configuration has been updated."
+}
+
+# Function to enable coordinates in a Minecraft PE Server
+enable_coordinates() {
+    echo "Enabling Coordinates in Minecraft PE Server..."
+
+    # List the available Minecraft servers
+    server_list=$(docker ps --format "{{.Names}}" | grep 'minecraft-bedrock-server')
+
+    if [ -z "$server_list" ]; then
+        echo "No Minecraft PE Servers are currently running."
+        return
+    fi
+
+    # Prompt for server selection if there are multiple servers
+    if [ $(echo "$server_list" | wc -l) -gt 1 ]; then
+        echo "Select the server to enable coordinates:"
+        select server_name in $server_list; do
+            [ -n "$server_name" ] && break
+        done
+    else
+        server_name="$server_list"
+    fi
+
+    # Enable coordinates in the selected server
+    docker exec $server_name send-command gamerule showcoordinates true
+
+    echo "Coordinates have been enabled in the selected Minecraft PE Server."
+}
+
+
 # Sub-menu for Marzban options
 marzban_submenu() {
     while true; do
@@ -280,17 +361,20 @@ uninstall_marzban_submenu() {
 minecraft_pe_server_submenu() {
     while true; do
         echo "Minecraft PE Server Sub-Options:"
-        echo "1: Install Minecraft PE Server"
+        echo "1: Install Minecraft Server"
+        echo "2: Edit Port and Difficulty"
+        echo "3: Enable Coordinates"
         echo "0: Back to main menu"
 
-        read -p "Enter your choice: " minecraft_pe_choice
+        read -p "Enter your choice: " sub_choice
 
-        case $minecraft_pe_choice in
+        case $sub_choice in
             1) install_minecraft_pe_server ;;
+            2) edit_minecraft_pe_server ;;
+            3) enable_coordinates ;;
             0) break ;;
             *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
         esac
-
         read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
         if [ "$input" == "q" ]; then
             echo "Exiting..."
@@ -298,6 +382,7 @@ minecraft_pe_server_submenu() {
         fi
     done
 }
+
 
 # Function to quit the script
 quit_script() {
