@@ -88,8 +88,16 @@ uninstall_all_marzban() {
 # Function to update the script from the provided link
 update_script() {
     echo "Updating the script..."
-    curl -fsSL https://raw.githubusercontent.com/vblyrpv074/mine/main/me.sh > me.sh
-    echo "Script updated successfully."
+
+    # Download the updated script
+    updated_script_url="https://raw.githubusercontent.com/vblyrpv074/mine/main/me.sh"
+    if curl -fsSL -o updated_me.sh "$updated_script_url"; then
+        mv -f updated_me.sh me.sh
+        chmod +x me.sh
+        echo "Script updated successfully."
+    else
+        echo "Failed to update the script. Please check the provided link."
+    fi
 }
 
 # Function for SSL Cert Management
