@@ -112,6 +112,7 @@ while true; do
     echo "3: SSL Cert Management"
     echo "4: Update Repositories"
     echo "0: Quit"
+    echo "00: Update"
 
     read -p "Enter your choice: " choice
 
@@ -174,6 +175,7 @@ while true; do
             echo "Exiting..."
             exit 0
             ;;
+        00) update_script ;;
         *)
             echo "Invalid option. Please choose a valid option."
     esac
