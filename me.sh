@@ -85,12 +85,20 @@ uninstall_all_marzban() {
     cd && cd Marzban-node && docker compose down -v && cd && rm -rf Marzban-node && rm -r /var/lib/marzban-node
 }
 
+# Function to update the script from the provided link
+update_script() {
+    echo "Updating the script..."
+    curl -fsSL https://raw.githubusercontent.com/vblyrpv074/mine/main/me.sh > me.sh
+    echo "Script updated successfully."
+}
+
 
 # Main loop
 while true; do
     echo "Select an option:"
     echo "1: Install Docker"
     echo "2: Marzban"
+    echo "3: Update script"
     echo "0: Quit"
     
     read -p "Enter your choice: " choice
@@ -138,6 +146,7 @@ while true; do
                 esac
             done
             ;;
+        3) update_script ;;
         0)
             echo "Exiting..."
             exit 0
