@@ -62,8 +62,7 @@ install_marzban_panel() {
 # Function to uninstall Marzban Panel
 uninstall_marzban_panel() {
     echo "Uninstalling Marzban Panel..."
-    # Add the uninstall script for Marzban Panel
-    # marzban uninstall
+    cd && marzban uninstall
 }
 
 # Function to uninstall Marzban Node
@@ -75,9 +74,14 @@ uninstall_marzban_node() {
 # Function to uninstall all Marzban components
 uninstall_all_marzban() {
     echo "Uninstalling all Marzban components..."
-    # Add the script to uninstall all Marzban components
-    # This should include uninstalling both Marzban Panel and Marzban Node
+    
+    # Uninstall Marzban Panel
+    cd && marzban uninstall
+    
+    # Uninstall Marzban Node
+    cd && cd Marzban-node && docker compose down -v && cd && rm -rf Marzban-node && rm -r /var/lib/marzban-node
 }
+
 
 # Main loop
 while true; do
