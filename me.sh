@@ -218,6 +218,59 @@ EOF
 
 }
 
+# Function to remove a Minecraft PE Server
+remove_minecraft_pe_server() {
+    echo "Removing Minecraft PE Server..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        echo "Docker is not installed. Please install Docker first."
+        return
+    fi
+
+    # List the available Minecraft servers
+    echo "Running Minecraft PE Servers:"
+    docker ps --format "table {{.Names}}" | grep 'minecraft-bedrock-server'
+
+    # Ask for the server name (container name) or provide an option to remove all
+    read -p "Enter the server name to remove or 'all' to remove all servers (leave blank to cancel): " server_name
+
+    if [ -z "$server_name" ]; then
+        echo "No servers selected for removal."
+        return
+    fi
+
+    if [ "$server_name" == "all" ]; then
+        # Remove all Minecraft server containers
+        docker stop $(docker ps -a -q) 2>/dev/null
+        docker rm $(docker ps -a -q) 2>/dev/null
+
+        # Remove all Docker Compose configurations
+        rm -f /root/minecraft/*/*.yml 2>/dev/null
+
+        # Remove all server data volumes
+        docker volume rm $(docker volume ls -qf name=mc*)
+        
+        echo "All Minecraft PE Servers have been removed."
+    else
+        # Stop and remove the specified Minecraft server container
+        docker stop "$server_name" 2>/dev/null
+        docker rm "$server_name" 2>/dev/null
+
+        # Remove the Docker Compose configuration and the server data volume
+        config_file="/root/minecraft/$server_name/docker-compose.yml"
+        if [ -f "$config_file" ]; then
+            rm -f "$config_file"
+        fi
+
+        data_volume="$server_name"
+        if docker volume inspect "$data_volume" 2>/dev/null; then
+            docker volume rm "$data_volume"
+        fi
+
+        echo "Minecraft PE Server '$server_name' has been removed."
+    fi
+}
 
 
 
@@ -444,6 +497,7 @@ minecraft_pe_server_submenu() {
             1) install_minecraft_pe_server ;;
             2) edit_minecraft_pe_server ;;
             3) enable_coordinates ;;
+            4) remove_minecraft_pe_server ;;
             0) break ;;
             *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
         esac
