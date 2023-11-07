@@ -24,6 +24,26 @@ install_docker() {
     fi
 }
 
+# Function to uninstall Docker
+uninstall_docker() {
+    clear
+    read -p "Are you sure want to delete Docker？(Y/N): " choice
+    case "$choice" in
+        [Yy])
+            docker rm $(docker ps -a -q) && docker rmi $(docker images -q) && docker network prune
+            apt-get remove docker -y
+            apt-get remove docker-ce -y
+            apt-get purge docker-ce -y
+            rm -rf /var/lib/docker
+            ;;
+        [Nn])
+            ;;
+        *)
+            echo "无效的选择，请输入 Y 或 N。"
+            ;;
+    esac
+}
+
 # Function to install Marzban-Node
 install_marzban_node() {
     echo "Installing Marzban-Node..."
@@ -293,7 +313,7 @@ main_menu() {
     while true; do
         clear
         echo "Select an option:"
-        echo "1: Install Docker"
+        echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
         echo "4: Update Repositories"
@@ -304,7 +324,7 @@ main_menu() {
         read -p "Enter your choice: " choice
 
         case $choice in
-            1) install_docker ;;
+            1) docker_submenu ;;
             2) marzban_submenu ;;
             3) ssl_cert_management ;;
             4) update_repositories ;;
@@ -325,6 +345,29 @@ main_menu() {
 
 
 # Sub Menu
+# Sub-menu for Docker options
+docker_submenu() {
+    while true; do
+        clear
+        echo "Docker Sub-Options:"
+        echo "1: Install Docker"
+        echo "2: Uninstall Docker"
+        echo "0: Back to main menu"
+
+        read -p "Enter your choice: " docker_choice
+
+        case "$docker_choice" in
+            1) install_docker ;;
+            2) uninstall_docker ;;
+            0) break ;;
+            *)
+                echo "Invalid option. Please choose a valid option."
+                ;;
+        esac
+    done
+}
+
+
 # Sub-menu for Marzban options
 marzban_submenu() {
     while true; do
