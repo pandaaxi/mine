@@ -220,7 +220,6 @@ EOF
 
 # Function to remove a Minecraft PE Server
 remove_minecraft_pe_server() {
-    echo "Removing Minecraft PE Server..."
 
     # Check if Docker is installed
     if ! command -v docker &> /dev/null; then
@@ -228,12 +227,12 @@ remove_minecraft_pe_server() {
         return
     fi
 
-    # List the available Minecraft servers
-    server_list=$(docker ps --format "{{.Names}}" | grep 'minecraft-bedrock-server')
+    # List the available Minecraft servers based on the image name
+    server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
 
     if [ -z "$server_list" ]; then
-        echo "No Minecraft PE Servers are currently running."
-        return
+    echo "No Minecraft PE Servers are currently running."
+    return
     fi
 
     echo "Running Minecraft PE Servers:"
@@ -242,6 +241,8 @@ remove_minecraft_pe_server() {
     # Ask for the server name (container name) or provide an option to remove all
     read -p "Enter the server name to remove or 'all' to remove all servers (leave blank to cancel): " server_name
 
+    echo "Removing Minecraft PE Server..."
+    
     if [ -z "$server_name" ]; then
         echo "No servers selected for removal."
         return
@@ -297,12 +298,12 @@ edit_minecraft_pe_server() {
         fi
     fi
 
-    # List the available Minecraft servers
-    server_list=$(docker ps --format "{{.Names}}" | grep 'minecraft-bedrock-server')
+    # List the available Minecraft servers based on the image name
+    server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
 
     if [ -z "$server_list" ]; then
-        echo "No Minecraft PE Servers are currently running."
-        return
+    echo "No Minecraft PE Servers are currently running."
+    return
     fi
 
     # Prompt for server selection if there are multiple servers
@@ -343,12 +344,12 @@ edit_minecraft_pe_server() {
 enable_coordinates() {
     echo "Enabling Coordinates in Minecraft PE Server..."
 
-    # List the available Minecraft servers
-    server_list=$(docker ps --format "{{.Names}}" | grep 'minecraft-bedrock-server')
+    # List the available Minecraft servers based on the image name
+    server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
 
     if [ -z "$server_list" ]; then
-        echo "No Minecraft PE Servers are currently running."
-        return
+    echo "No Minecraft PE Servers are currently running."
+    return
     fi
 
     # Prompt for server selection if there are multiple servers
