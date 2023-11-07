@@ -229,8 +229,15 @@ remove_minecraft_pe_server() {
     fi
 
     # List the available Minecraft servers
+    server_list=$(docker ps --format "{{.Names}}" | grep 'minecraft-bedrock-server')
+
+    if [ -z "$server_list" ]; then
+        echo "No Minecraft PE Servers are currently running."
+        return
+    fi
+
     echo "Running Minecraft PE Servers:"
-    docker ps --format "table {{.Names}}" | grep 'minecraft-bedrock-server'
+    echo "$server_list"
 
     # Ask for the server name (container name) or provide an option to remove all
     read -p "Enter the server name to remove or 'all' to remove all servers (leave blank to cancel): " server_name
@@ -271,6 +278,7 @@ remove_minecraft_pe_server() {
         echo "Minecraft PE Server '$server_name' has been removed."
     fi
 }
+
 
 
 
