@@ -3,22 +3,13 @@
 # Function script
 # Function to install Docker
 install_docker() {
+    clear
     echo "Installing Docker..."
     if ! command -v docker &> /dev/null; then
-        # Update and upgrade the system
-        apt update && apt upgrade -y && apt autoclean -y
-
-        # Install Docker using the official script
         curl -fsSL https://get.docker.com | sh
-
-        # Add the current user to the docker group (to run Docker without sudo)
-        usermod -aG docker $USER
-
-        # Start the Docker service
         systemctl start docker
-
-        # Enable Docker to start on boot
         systemctl enable docker
+        curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
     else
         echo "Docker is already installed."
     fi
@@ -30,16 +21,25 @@ uninstall_docker() {
     read -p "Are you sure want to delete Docker？(Y/N): " choice
     case "$choice" in
         [Yy])
-            docker rm $(docker ps -a -q) && docker rmi $(docker images -q) && docker network prune
+            echo "Removing Docker containers and volumes..."
+            docker stop $(docker ps -a -q) &>/dev/null
+            docker rm -f $(docker ps -a -q) &>/dev/null
+            docker rmi $(docker images -q) &>/dev/null
+            docker network prune
+            docker volume prune -f
+
+            echo "Uninstalling Docker..."
             apt-get remove docker -y
             apt-get remove docker-ce -y
             apt-get purge docker-ce -y
             rm -rf /var/lib/docker
+
+            echo "Docker has been uninstalled."
             ;;
         [Nn])
             ;;
         *)
-            echo "无效的选择，请输入 Y 或 N。"
+            echo "Invalid answer, please input N or Y。"
             ;;
     esac
 }
