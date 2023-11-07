@@ -280,9 +280,6 @@ remove_minecraft_pe_server() {
     fi
 }
 
-
-
-
 # Function to edit port and difficulty of the Minecraft PE Server
 edit_minecraft_pe_server() {
     echo "Editing Minecraft PE Server Port and Difficulty..."
@@ -302,8 +299,8 @@ edit_minecraft_pe_server() {
     server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
 
     if [ -z "$server_list" ]; then
-    echo "No Minecraft PE Servers are currently running."
-    return
+        echo "No Minecraft PE Servers are currently running."
+        return
     fi
 
     # Prompt for server selection if there are multiple servers
@@ -316,6 +313,12 @@ edit_minecraft_pe_server() {
         server_name="$server_list"
     fi
 
+    # Get the current server directory
+    server_directory="/root/minecraft/$server_name"
+
+    # Stop the Minecraft server using Docker Compose
+    (cd "$server_directory" && docker-compose down)
+
     # Ask for a new server port
     read -p "Enter a new server port (leave blank to keep the current port): " new_server_port
 
@@ -323,17 +326,15 @@ edit_minecraft_pe_server() {
     read -p "Enter a new difficulty level (easy/normal/hard, leave blank to keep the current difficulty): " new_difficulty
 
     # Get the current difficulty from the Docker Compose file
-    difficulty=$(grep -oP "(?<=DIFFICULTY=)\w+" "/root/minecraft/$server_name/docker-compose.yml")
+    difficulty=$(grep -oP "(?<=DIFFICULTY=)\w+" "$server_directory/docker-compose.yml")
 
     # Edit the Docker Compose file for the selected server
-    docker_compose_file="/root/minecraft/$server_name/docker-compose.yml"
     sed -i -e "/container_name: $server_name/,/DIFFICULTY=/s/SERVER_PORT=[0-9]*/SERVER_PORT=${new_server_port:-$server_port}/" \
            -e "/container_name: $server_name/,/LEVEL_SEED=/s/DIFFICULTY=$difficulty/DIFFICULTY=${new_difficulty:-$difficulty}/" \
-           $docker_compose_file
+           "$server_directory/docker-compose.yml"
 
-    # Restart the selected Minecraft server
-    cd "/root/minecraft/$server_name"
-    docker-compose restart
+    # Restart the selected Minecraft server using Docker Compose
+    (cd "$server_directory" && docker-compose up -d)
 
     echo "Minecraft PE Server configuration has been updated."
 }
