@@ -489,6 +489,7 @@ minecraft_pe_server_submenu() {
         echo "1: Install Minecraft Server"
         echo "2: Edit Port and Difficulty"
         echo "3: Enable Coordinates"
+        echo "4: Remove Minecraft Server"
         echo "0: Back to main menu"
 
         read -p "Enter your choice: " sub_choice
