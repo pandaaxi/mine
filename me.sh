@@ -231,8 +231,8 @@ remove_minecraft_pe_server() {
     server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
 
     if [ -z "$server_list" ]; then
-    echo "No Minecraft PE Servers are currently running."
-    return
+        echo "No Minecraft PE Servers are currently running."
+        return
     fi
 
     echo "Running Minecraft PE Servers:"
@@ -241,44 +241,62 @@ remove_minecraft_pe_server() {
     # Ask for the server name (container name) or provide an option to remove all
     read -p "Enter the server name to remove or 'all' to remove all servers (leave blank to cancel): " server_name
 
-    echo "Removing Minecraft PE Server..."
-    
     if [ -z "$server_name" ]; then
         echo "No servers selected for removal."
         return
     fi
 
     if [ "$server_name" == "all" ]; then
-        # Remove all Minecraft server containers
-        docker stop $(docker ps -a -q) 2>/dev/null
-        docker rm $(docker ps -a -q) 2>/dev/null
+        for server in $server_list; do
+            # Prompt to back up game data before removal
+            read -p "Do you want to back up game data for '$server'? (y/n): " backup_choice
+            if [ "$backup_choice" == "y" ]; then
+                # Create a backup of the game data
+                mkdir -p "/home/mc_data/$server"
+                docker run --rm -v "$server:/backup" -v "/home/mc_data/$server:/data" alpine tar -cf /backup/game_data.tar -C /backup .
+            fi
 
-        # Remove all Docker Compose configurations
-        rm -f /root/minecraft/*/*.yml 2>/dev/null
+            # Remove the server using Docker Compose
+            cd "/root/minecraft/$server"
+            docker-compose down
+
+            # Remove the Docker Compose configuration
+            rm -f "/root/minecraft/$server/docker-compose.yml"
+
+            # Remove the server folder
+            rm -rf "/root/minecraft/$server"
+        done
 
         # Remove all server data volumes
         docker volume rm $(docker volume ls -qf name=mc*)
         
         echo "All Minecraft PE Servers have been removed."
     else
-        # Stop and remove the specified Minecraft server container
-        docker stop "$server_name" 2>/dev/null
-        docker rm "$server_name" 2>/dev/null
-
-        # Remove the Docker Compose configuration and the server data volume
-        config_file="/root/minecraft/$server_name/docker-compose.yml"
-        if [ -f "$config_file" ]; then
-            rm -f "$config_file"
+        # Prompt to back up game data before removal
+        read -p "Do you want to back up game data for '$server_name'? (y/n): " backup_choice
+        if [ "$backup_choice" == "y" ]; then
+            # Create a backup of the game data
+            mkdir -p "/home/mc_data/$server_name"
+            docker run --rm -v "$server_name:/backup" -v "/home/mc_data/$server_name:/data" alpine tar -cf /backup/game_data.tar -C /backup .
         fi
 
-        data_volume="$server_name"
-        if docker volume inspect "$data_volume" 2>/dev/null; then
-            docker volume rm "$data_volume"
-        fi
+        # Remove the server using Docker Compose
+        cd "/root/minecraft/$server_name"
+        docker-compose down
 
+        # Remove the Docker Compose configuration
+        rm -f "/root/minecraft/$server_name/docker-compose.yml"
+
+        # Remove the server folder
+        rm -rf "/root/minecraft/$server_name"
+
+        # Remove the server data volume
+        docker volume rm "$server_name"
+        
         echo "Minecraft PE Server '$server_name' has been removed."
     fi
 }
+
 
 # Function to edit port and difficulty of the Minecraft PE Server
 edit_minecraft_pe_server() {
