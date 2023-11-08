@@ -388,6 +388,56 @@ enable_coordinates() {
 }
 
 
+# Add this function at the end of your script
+fail2bansshd() {
+    # Check if Fail2Ban is installed, and install it if not
+    if ! command -v fail2ban-server &> /dev/null; then
+        echo "Installing Fail2Ban..."
+        apt update -y
+        apt install -y fail2ban
+    fi
+
+    # Start Fail2Ban and enable it on boot
+    systemctl start fail2ban
+    systemctl enable fail2ban
+
+    # Copy the Fail2Ban configuration to a local file
+    cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+
+    # Remove existing SSH-related configuration files
+    rm -rf /etc/fail2ban/jail.d/*
+
+    # Create a new configuration file for SSH (sshd)
+    cat <<EOF > /etc/fail2ban/jail.d/sshd.local
+    [sshd]
+    enabled = true
+    mode   = normal
+    backend = systemd
+EOF
+
+    # Restart Fail2Ban to apply the configuration changes
+    systemctl restart fail2ban
+
+    # Display Fail2Ban status and SSHD status in Fail2Ban
+    echo "Fail2Ban Status:"
+    systemctl status fail2ban
+
+    echo "Fail2Ban Status for SSHD:"
+    fail2ban-client status sshd
+}
+
+fail2banstatus() {
+    # Display Fail2Ban status and SSHD status in Fail2Ban
+    echo "Fail2Ban Status:"
+    systemctl status fail2ban
+
+    echo "Fail2Ban Client Status:"
+    fail2ban-client status
+
+    echo "Fail2Ban Status for SSHD:"
+    fail2ban-client status sshd
+}
+
 
 # Main menu
 main_menu() {
@@ -399,6 +449,8 @@ main_menu() {
         echo "3: SSL Cert Management"
         echo "4: Update Repositories"
         echo "5: Minecraft PE Server"
+        echo "6: Fail2Ban for SSHD"
+        echo "7: Fail2Ban status"
         echo "0: Quit"
         echo "00: Update"
 
@@ -410,6 +462,8 @@ main_menu() {
             3) ssl_cert_management ;;
             4) update_repositories ;;
             5) minecraft_pe_server_submenu ;;
+            6) fail2bansshd ;;
+            7) fail2banstatus;;
             0) quit_script ;;
             00) update_script ;;
             *) echo "Invalid option. Please choose a valid option." ;;
