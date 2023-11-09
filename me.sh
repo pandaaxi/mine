@@ -504,6 +504,8 @@ reset_ufw() {
 setup_wordpress_with_docker() {
     # Ask for the domain name
     read -p "Enter your domain name: " DOMAIN
+    read -p "Enter your domain name: " DB_USER_PASSWORD
+    read -p "Enter your domain name: " DB_ROOT_PASSWORD
 
     # Update and install required packages
     apt update -y
@@ -540,11 +542,11 @@ services:
       #- ./theme-name/trunk/:/var/www/html/wp-content/themes/theme-name # Theme development
     environment:
       WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_NAME: "${DB_NAME}"
-      WORDPRESS_DB_USER: "${DB_USER_NAME}"
-      WORDPRESS_DB_PASSWORD: "${DB_USER_PASSWORD}"
-      VIRTUAL_HOST: "${DOMAIN}",www."${DOMAIN}"
-      LETSENCRYPT_HOST: "${DOMAIN}",www."${DOMAIN}"
+      WORDPRESS_DB_NAME: \${DOMAIN}
+      WORDPRESS_DB_USER: \${DOMAIN}
+      WORDPRESS_DB_PASSWORD: \${DB_USER_PASSWORD}
+      VIRTUAL_HOST: \${DOMAIN},www.\${DOMAIN}
+      LETSENCRYPT_HOST: \${DOMAIN},www.\${DOMAIN}
     depends_on:
       - db
     links:
@@ -563,10 +565,10 @@ services:
       - ./wp-data:/docker-entrypoint-initdb.d
       - db_data:/var/lib/mysql
     environment:
-      MYSQL_DATABASE: "${DB_NAME}"
-      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
-      MYSQL_USER: "${DB_USER_NAME}"
-      MYSQL_PASSWORD: "${DB_USER_PASSWORD}"
+      MYSQL_DATABASE: \${DOMAIN}
+      MYSQL_ROOT_PASSWORD: \${DB_ROOT_PASSWORD}
+      MYSQL_USER: \${DOMAIN}
+      MYSQL_PASSWORD: \${DB_USER_PASSWORD}
 	
   nginx:
     container_name: nginx
@@ -595,21 +597,10 @@ services:
         - /var/run/docker.sock:/var/run/docker.sock
         - ./nginx/acme:/etc/acme.sh
     environment:
-        DEFAULT_EMAIL: certbot@"${DOMAIN}"
+        DEFAULT_EMAIL: certbot@\${DOMAIN}
 		
 volumes:
   db_data:
-EOF
-
-    # Create the .env file with the provided domain and generate passwords
-    DB_USER_PASSWORD=$(uuidgen)
-    DB_ROOT_PASSWORD=$(uuidgen)
-    cat <<EOF > "/opt/wordpress/.env"
-DOMAIN=\${DOMAIN}
-DB_NAME=\${DOMAIN}
-DB_USER_NAME=\${DOMAIN}
-DB_USER_PASSWORD=\${DB_USER_PASSWORD}
-DB_ROOT_PASSWORD=\${DB_ROOT_PASSWORD}
 EOF
 
 
