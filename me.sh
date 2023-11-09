@@ -5,14 +5,13 @@
 install_docker() {
     clear
     echo "Installing Docker..."
-    if ! command -v docker &> /dev/null; then
-        curl -fsSL https://get.docker.com | sh
-        systemctl start docker
-        systemctl enable docker
-        curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
-    else
-        echo "Docker is already installed."
-    fi
+
+    curl -fsSL https://get.docker.com | sh
+    systemctl start docker
+    systemctl enable docker
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+
+    echo "Docker is already installed."
 }
 
 # Function to uninstall Docker
@@ -504,8 +503,9 @@ reset_ufw() {
 setup_wordpress_with_docker() {
     # Ask for the domain name
     read -p "Enter your domain name: " DOMAIN
-    read -p "Enter your User Password: " DB_USER_PASSWORD
-    read -p "Enter your Root Password: " DB_ROOT_PASSWORD
+    read -p "Enter your User name: " DB_NAME
+    read -p "Enter your User Password: " USER_PASSWORD
+    read -p "Enter your Root Password: " ROOT_PASSWORD
 
     # Update and install required packages
     apt update -y
@@ -536,11 +536,11 @@ services:
       #- ./theme-name/trunk/:/var/www/html/wp-content/themes/theme-name # Theme development
     environment:
       WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_NAME: \${DOMAIN}
-      WORDPRESS_DB_USER: \${DOMAIN}
-      WORDPRESS_DB_PASSWORD: \${DB_USER_PASSWORD}
-      VIRTUAL_HOST: \${DOMAIN},www.\${DOMAIN}
-      LETSENCRYPT_HOST: \${DOMAIN},www.\${DOMAIN}
+      WORDPRESS_DB_NAME: "${DB_NAME}"
+      WORDPRESS_DB_USER: "${DB_USER_NAME}"
+      WORDPRESS_DB_PASSWORD: "${DB_USER_PASSWORD}"
+      VIRTUAL_HOST: $DOMAIN,www.$DOMAIN
+      LETSENCRYPT_HOST: $DOMAIN,www.$DOMAIN
     depends_on:
       - db
     links:
@@ -559,10 +559,10 @@ services:
       - ./wp-data:/docker-entrypoint-initdb.d
       - db_data:/var/lib/mysql
     environment:
-      MYSQL_DATABASE: \${DOMAIN}
-      MYSQL_ROOT_PASSWORD: \${DB_ROOT_PASSWORD}
-      MYSQL_USER: \${DOMAIN}
-      MYSQL_PASSWORD: \${DB_USER_PASSWORD}
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_USER: "${DB_USER_NAME}"
+      MYSQL_PASSWORD: "${DB_USER_PASSWORD}"
 
   nginx:
     container_name: nginx
@@ -591,20 +591,28 @@ services:
         - /var/run/docker.sock:/var/run/docker.sock
         - ./nginx/acme:/etc/acme.sh
     environment:
-        DEFAULT_EMAIL: certbot@\${DOMAIN}
+        DEFAULT_EMAIL: certbot@gmail.com
 
 volumes:
   db_data:
 EOF
 
 
+    cat <<EOF > "/opt/wordpress/.env"
+DB_NAME=$DB_NAME
+DB_USER_NAME=$DB_NAME
+DB_USER_PASSWORD=$USER_PASSWORD
+DB_ROOT_PASSWORD=$ROOT_PASSWORD
+EOF
+
+
     # Start the WordPress setup with Docker Compose
-    docker-compose up -d
+    docker compose up -d
 
     # Print the generated passwords
-    echo "Visit wordpress website: https://\${DOMAIN}"
-    echo "Generated WORDPRESS_DB_PASSWORD, MYSQL_PASSWORD: \${DB_USER_PASSWORD}"
-    echo "Generated MYSQL_ROOT_PASSWORD: \${DB_ROOT_PASSWORD}"
+    echo "Visit wordpress website: https://'${DOMAIN}'/wp-admin/"
+    echo "Generated WORDPRESS_DB_PASSWORD, MYSQL_PASSWORD: '${USER_PASSWORD}'"
+    echo "Generated MYSQL_ROOT_PASSWORD: '${ROOT_PASSWORD}'"
 }
 
 
