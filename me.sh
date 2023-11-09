@@ -438,6 +438,191 @@ fail2banstatus() {
     fail2ban-client status sshd
 }
 
+# Function to install UFW (Uncomplicated Firewall)
+install_ufw() {
+    echo "Installing UFW (Uncomplicated Firewall)..."
+    apt-get update
+    apt-get install ufw -y
+    ufw default deny incoming
+    ufw default allow outgoing
+    echo "UFW has been installed and default policies set."
+}
+
+# Function to allow ports for Marzban
+allow_port_for_marzban() {
+    echo "Allowing ports for Marzban..."
+    ufw enable
+    ufw allow 22/tcp
+    #Marzban Node Port
+    ufw allow 62050/tcp
+    ufw allow 62051/tcp
+    #Https Port
+    ufw allow 443/tcp
+    ufw allow 2087/tcp
+    ufw allow 2096/tcp
+    ufw allow 8443/tcp
+    #Http Port
+    ufw allow 80/tcp
+    ufw allow 8080/tcp
+    ufw allow 20001,20002,20003,20004/tcp
+    ufw status
+    echo "Ports for Marzban have been allowed."
+}
+
+# Function to allow ports for Wordpress
+allow_port_for_wordpress() {
+    echo "Allowing ports for Wordpress..."
+    ufw enable
+    ufw allow 22/tcp
+    ufw allow 443/tcp
+    ufw allow 80/tcp
+    ufw status
+    echo "Ports for Wordpress have been allowed."
+}
+
+# Function to allow ports for OpenVPN
+allow_port_for_openvpn() {
+    echo "Allowing ports for OpenVPN..."
+    ufw enable
+    ufw allow 22/tcp
+    ufw allow 443/tcp
+    ufw allow 943/tcp
+    ufw allow 1194/udp
+    ufw status
+    echo "Ports for OpenVPN have been allowed."
+}
+
+# Function to reset UFW to default settings
+reset_ufw() {
+    echo "Resetting UFW to default settings..."
+    ufw reset
+    ufw disable
+    echo "UFW has been reset and disable"
+}
+
+# Function to setup WordPress with Docker
+setup_wordpress_with_docker() {
+    # Ask for the domain name
+    read -p "Enter your domain name: " DOMAIN
+
+    # Update and install required packages
+    apt update -y
+    apt install wget curl nano software-properties-common dirmngr apt-transport-https gnupg gnupg2 ca-certificates lsb-release ubuntu-keyring unzip -y
+
+    # Check if Docker is installed and install if not
+    install_docker
+
+    # Allow UFW for WordPress
+    allow_port_for_wordpress
+
+    # Create the Docker directory
+    mkdir -p /opt/wordpress
+    cd /opt/wordpress
+
+    mkdir config
+    mkdir -p nginx/vhost
+
+    # Create the Docker Compose file with the provided domain
+    cat <<EOF > "/opt/wordpress/docker-compose.yml"
+version: '3.9'
+
+services:
+  wp:
+    image: wordpress:latest
+    container_name: wordpress-app
+    restart: unless-stopped
+    expose:
+      - 8080
+    volumes:
+      - ./config/php.conf.ini:/usr/local/etc/php/conf.d/conf.ini
+      - ./wp-app:/var/www/html
+      #- ./plugin-name/trunk/:/var/www/html/wp-content/plugins/plugin-name # Plugin development
+      #- ./theme-name/trunk/:/var/www/html/wp-content/themes/theme-name # Theme development
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: "${DB_NAME}"
+      WORDPRESS_DB_USER: "${DB_USER_NAME}"
+      WORDPRESS_DB_PASSWORD: "${DB_USER_PASSWORD}"
+      VIRTUAL_HOST: "${DOMAIN}",www."${DOMAIN}"
+      LETSENCRYPT_HOST: "${DOMAIN}",www."${DOMAIN}"
+    depends_on:
+      - db
+    links:
+      - db
+
+  db:
+    image: mysql:latest
+    container_name: wordpressdb
+    restart: unless-stopped
+    command: [
+        '--default_authentication_plugin=mysql_native_password',
+        '--character-set-server=utf8mb4',
+        '--collation-server=utf8mb4_unicode_ci'
+    ]
+    volumes:
+      - ./wp-data:/docker-entrypoint-initdb.d
+      - db_data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_USER: "${DB_USER_NAME}"
+      MYSQL_PASSWORD: "${DB_USER_PASSWORD}"
+	
+  nginx:
+    container_name: nginx
+    image: nginxproxy/nginx-proxy
+    restart: unless-stopped
+    ports:
+        - 80:80
+        - 443:443
+    volumes:
+        - /var/run/docker.sock:/tmp/docker.sock:ro
+        - ./nginx/html:/usr/share/nginx/html
+        - ./nginx/certs:/etc/nginx/certs
+        - ./nginx/vhost:/etc/nginx/vhost.d
+    logging:
+        options:
+            max-size: "10m"
+            max-file: "3"
+		
+  acme-companion:
+    container_name: acme-companion
+    image: nginxproxy/acme-companion
+    restart: unless-stopped
+    volumes_from:
+        - nginx
+    volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ./nginx/acme:/etc/acme.sh
+    environment:
+        DEFAULT_EMAIL: certbot@"${DOMAIN}"
+		
+volumes:
+  db_data:
+EOF
+
+    # Create the .env file with the provided domain and generate passwords
+    DB_USER_PASSWORD=$(uuidgen)
+    DB_ROOT_PASSWORD=$(uuidgen)
+    cat <<EOF > "/opt/wordpress/.env"
+DOMAIN=\${DOMAIN}
+DB_NAME=\${DOMAIN}
+DB_USER_NAME=\${DOMAIN}
+DB_USER_PASSWORD=\${DB_USER_PASSWORD}
+DB_ROOT_PASSWORD=\${DB_ROOT_PASSWORD}
+EOF
+
+
+    # Start the WordPress setup with Docker Compose
+    docker-compose up -d
+
+    # Print the generated passwords
+    echo "Visit wordpress website: https://\${DOMAIN}"
+    echo "Generated DB_USER_PASSWORD: \${DB_USER_PASSWORD}"
+    echo "Generated DB_ROOT_PASSWORD: \${DB_ROOT_PASSWORD}"
+}
+
+
 
 # Main menu
 main_menu() {
@@ -451,6 +636,7 @@ main_menu() {
         echo "5: Minecraft PE Server"
         echo "6: Fail2Ban for SSHD"
         echo "7: Fail2Ban status"
+        echo "8: Config UFW"
         echo "0: Quit"
         echo "00: Update"
 
@@ -464,6 +650,7 @@ main_menu() {
             5) minecraft_pe_server_submenu ;;
             6) fail2bansshd ;;
             7) fail2banstatus;;
+            8) configure_ufw_security;;
             0) quit_script ;;
             00) update_script ;;
             *) echo "Invalid option. Please choose a valid option." ;;
@@ -487,13 +674,17 @@ docker_submenu() {
         echo "Docker Sub-Options:"
         echo "1: Install Docker"
         echo "2: Uninstall Docker"
+        echo "3: Install Wordpress"
         echo "0: Back to main menu"
+
+        docker ps -a
 
         read -p "Enter your choice: " docker_choice
 
         case "$docker_choice" in
             1) install_docker ;;
             2) uninstall_docker ;;
+            3) setup_wordpress_with_docker ;;
             0) break ;;
             *)
                 echo "Invalid option. Please choose a valid option."
@@ -502,6 +693,41 @@ docker_submenu() {
     done
 }
 
+# Sub-menu configure UFW (Uncomplicated Firewall) security
+configure_ufw_security() {
+    echo "Configuring UFW (Uncomplicated Firewall) security..."
+
+    # Check if UFW is installed
+    if ! command -v ufw &> /dev/null; then
+        read -p "UFW is not available! Do you want to install? (y/n) " ufw_choice
+        if [ "$ufw_choice" == "y" ]; then
+            install_ufw
+        else
+            echo "UFW is not installed. Please install UFW first."
+            return
+        fi
+    fi
+
+    while true; do
+        echo "UFW Security Sub-Options:"
+        echo "1: Allow port for Marzban"
+        echo "2: Allow port for Wordpress"
+        echo "3: Allow port for OpenVPN"
+        echo "0: Back to main menu"
+        echo "00: Reset UFW"
+
+        read -p "Enter your choice: " sub_choice
+
+        case $sub_choice in
+            1) allow_port_for_marzban ;;
+            2) allow_port_for_wordpress ;;
+            3) allow_port_for_openvpn ;;
+            0) break ;;
+            00) reset_ufw ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+    done
+}
 
 # Sub-menu for Marzban options
 marzban_submenu() {
