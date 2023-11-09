@@ -504,25 +504,19 @@ reset_ufw() {
 setup_wordpress_with_docker() {
     # Ask for the domain name
     read -p "Enter your domain name: " DOMAIN
-    read -p "Enter your domain name: " DB_USER_PASSWORD
-    read -p "Enter your domain name: " DB_ROOT_PASSWORD
+    read -p "Enter your User Password: " DB_USER_PASSWORD
+    read -p "Enter your Root Password: " DB_ROOT_PASSWORD
 
     # Update and install required packages
     apt update -y
     apt install wget curl nano software-properties-common dirmngr apt-transport-https gnupg gnupg2 ca-certificates lsb-release ubuntu-keyring unzip -y
 
-    # Check if Docker is installed and install if not
-    install_docker
-
-    # Allow UFW for WordPress
-    allow_port_for_wordpress
-
     # Create the Docker directory
     mkdir -p /opt/wordpress
     cd /opt/wordpress
 
-    mkdir config
-    mkdir -p nginx/vhost
+    mkdir /opt/wordpress/config
+    mkdir -p /opt/wordpress/nginx/vhost
 
     # Create the Docker Compose file with the provided domain
     cat <<EOF > "/opt/wordpress/docker-compose.yml"
@@ -609,8 +603,8 @@ EOF
 
     # Print the generated passwords
     echo "Visit wordpress website: https://\${DOMAIN}"
-    echo "Generated DB_USER_PASSWORD: \${DB_USER_PASSWORD}"
-    echo "Generated DB_ROOT_PASSWORD: \${DB_ROOT_PASSWORD}"
+    echo "Generated WORDPRESS_DB_PASSWORD, MYSQL_PASSWORD: \${DB_USER_PASSWORD}"
+    echo "Generated MYSQL_ROOT_PASSWORD: \${DB_ROOT_PASSWORD}"
 }
 
 
