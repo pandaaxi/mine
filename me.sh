@@ -536,9 +536,9 @@ services:
       #- ./theme-name/trunk/:/var/www/html/wp-content/themes/theme-name # Theme development
     environment:
       WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_NAME: "${DB_NAME}"
-      WORDPRESS_DB_USER: "${DB_USER_NAME}"
-      WORDPRESS_DB_PASSWORD: "${DB_USER_PASSWORD}"
+      WORDPRESS_DB_NAME: "\${DB_NAME}"
+      WORDPRESS_DB_USER: "\${DB_USER_NAME}"
+      WORDPRESS_DB_PASSWORD: "\${DB_USER_PASSWORD}"
       VIRTUAL_HOST: $DOMAIN,www.$DOMAIN
       LETSENCRYPT_HOST: $DOMAIN,www.$DOMAIN
     depends_on:
@@ -559,10 +559,10 @@ services:
       - ./wp-data:/docker-entrypoint-initdb.d
       - db_data:/var/lib/mysql
     environment:
-      MYSQL_DATABASE: "${DB_NAME}"
-      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
-      MYSQL_USER: "${DB_USER_NAME}"
-      MYSQL_PASSWORD: "${DB_USER_PASSWORD}"
+      MYSQL_DATABASE: "\${DB_NAME}"
+      MYSQL_ROOT_PASSWORD: "\${DB_ROOT_PASSWORD}"
+      MYSQL_USER: "\${DB_USER_NAME}"
+      MYSQL_PASSWORD: "\${DB_USER_PASSWORD}"
 
   nginx:
     container_name: nginx
