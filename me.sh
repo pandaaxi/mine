@@ -563,7 +563,7 @@ services:
       MYSQL_ROOT_PASSWORD: \${DB_ROOT_PASSWORD}
       MYSQL_USER: \${DOMAIN}
       MYSQL_PASSWORD: \${DB_USER_PASSWORD}
-	
+
   nginx:
     container_name: nginx
     image: nginxproxy/nginx-proxy
@@ -580,7 +580,7 @@ services:
         options:
             max-size: "10m"
             max-file: "3"
-		
+
   acme-companion:
     container_name: acme-companion
     image: nginxproxy/acme-companion
@@ -592,7 +592,7 @@ services:
         - ./nginx/acme:/etc/acme.sh
     environment:
         DEFAULT_EMAIL: certbot@\${DOMAIN}
-		
+
 volumes:
   db_data:
 EOF
