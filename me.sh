@@ -79,7 +79,74 @@ display_ssl_certificate() {
 # Function to install Marzban Panel
 install_marzban_panel() {
     echo "Installing Marzban Panel..."
-    apt update && apt upgrade -y and sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
+    apt update && apt upgrade -y && sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
+
+    # Replace the database
+    cp /home/ubuntu/db.sqlite3 /var/lib/marzban/db.sqlite3
+
+
+    # Install Xray for ARM
+    if [ "$(arch)" == "aarch64" ]; then
+        apt install unzip
+        rm -r /var/lib/marzban/xray-core/
+        mkdir -p /var/lib/marzban/xray-core/
+        cd /var/lib/marzban/xray-core/
+        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip -4
+        unzip Xray-linux-arm64-v8a.zip
+        rm Xray-linux-arm64-v8a.zip
+        cd
+    fi
+
+    # Install Xray for AMD
+    if [ "$(arch)" == "x86_64" ]; then
+        apt install unzip
+        rm -r /var/lib/marzban/xray-core/
+        mkdir -p /var/lib/marzban/xray-core/
+        cd /var/lib/marzban/xray-core/
+        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -4
+        unzip Xray-linux-64.zip
+        rm Xray-linux-64.zip
+        cd
+    fi
+
+    # Run script to register SSL for the domain (if provided)
+    read -p "Enter the domain for Marzban SSL registration (leave blank to skip): " domain
+    if [ -n "$domain" ]; then
+        # Register SSL for the domain
+        register_ssl "$domain" "/var/lib/marzban/certs/"
+
+        # Configure Marzban environment file
+        echo 'UVICORN_HOST="0.0.0.0"
+        UVICORN_PORT=443
+
+        SUDO_USERNAME="1625b6aa-2815-40ec-a218-11e6c0262e52"
+        SUDO_PASSWORD="4ae3db97-9ff0-4305-a68d-adbc6e0961ec"
+
+        UVICORN_SSL_CERTFILE="/var/lib/marzban/certs/domain.cert.crt"
+        UVICORN_SSL_KEYFILE="/var/lib/marzban/certs/domain.private.key"
+
+        XRAY_JSON="/var/lib/marzban/xray_config.json"
+        XRAY_SUBSCRIPTION_URL_PREFIX=https://$domain
+        XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
+
+        SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
+        ' > /opt/marzban/.env
+    else
+        # Configure Marzban environment file without SSL details
+        echo 'UVICORN_HOST="0.0.0.0"
+        UVICORN_PORT=443
+
+        SUDO_USERNAME="1625b6aa-2815-40ec-a218-11e6c0262e52"
+        SUDO_PASSWORD="4ae3db97-9ff0-4305-a68d-adbc6e0961ec"
+
+        XRAY_JSON="/var/lib/marzban/xray_config.json"
+        XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
+
+        SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
+        ' > /opt/marzban/.env
+    fi
+
+    marzban restart
 }
 
 # Function to uninstall Marzban Panel
@@ -120,11 +187,66 @@ update_script() {
     fi
 }
 
-
-# Function for SSL Cert Management
+# Function for SSL certificate management
 ssl_cert_management() {
-    echo "Running SSL Cert Management script..."
-    bash <(curl -L -s https://gitlab.com/rwkgyg/acme-script/raw/main/acme.sh)
+  # Function to generate a random string of specified length
+  generate_random_string() {
+    local length=$1
+    local characters="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    local result=""
+
+    for ((i = 0; i < length; i++)); do
+      rand_index=$((RANDOM % ${#characters}))
+      result+=${characters:$rand_index:1}
+    done
+
+    echo $result
+  }
+
+  # Function to register SSL certificates
+  register_ssl() {
+    local domain=$1
+    local certs_dir=$2
+
+    # Generate a random string
+    random_string=$(generate_random_string 5)
+
+    # Construct the email address
+    email_address="${random_string}@gmail.com"
+
+    cd ~
+    curl https://get.acme.sh | sh
+    ~/.acme.sh/acme.sh --register-account -m $email_address --issue -d $domain --standalone --key-file $certs_dir/${domain}.private.key --fullchain-file $certs_dir/${domain}.cert.crt --force
+  }
+
+  # Consume any remaining input in the buffer
+  read -r -t 0.1 -n 10000
+
+  # Main menu
+  echo "SSL Certificate Management Menu"
+  echo "1: Register SSL for marzban (using /var/lib/marzban/certs/)"
+  echo "2: Register SSL for x-ui (using /root/certs/)"
+  echo "3: Show SSL Certificate Summary"
+  read -p "Select an option (1-3): " choice
+
+  case $choice in
+    1)
+      read -p "Enter the domain for Marzban SSL registration: " domain
+      register_ssl "$domain" "/var/lib/marzban/certs/"
+      ;;
+    2)
+      read -p "Enter the domain for x-ui SSL registration: " domain
+      register_ssl "$domain" "/root/certs/"
+      ;;
+    3)
+      echo "SSL Certificates Summary:"
+      echo "Marzban: $(ls /var/lib/marzban/certs/ | grep -c '.cert.crt') certificates registered"
+      echo "x-ui: $(ls /root/certs/ | grep -c '.cert.crt') certificates registered"
+      ;;
+    *)
+      echo "Invalid choice. Please select a valid option."
+      ;;
+  esac
 }
 
 # Function to update repositories
