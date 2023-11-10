@@ -83,6 +83,7 @@ install_marzban_panel() {
 
     # Replace the database
     cp /home/ubuntu/db.sqlite3 /var/lib/marzban/db.sqlite3
+    sudo apt-get install socat
 
 
     # Install Xray for ARM
@@ -113,7 +114,11 @@ install_marzban_panel() {
     read -p "Enter the domain for Marzban SSL registration (leave blank to skip): " domain
     if [ -n "$domain" ]; then
         # Register SSL for the domain
-        register_ssl "$domain" "/var/lib/marzban/certs/"
+        mkdir -p /var/lib/marzban/certs
+        
+        register_ssl "$domain" "/var/lib/marzban/certs"
+
+
 
         # Configure Marzban environment file
         echo 'UVICORN_HOST="0.0.0.0"
@@ -122,11 +127,11 @@ install_marzban_panel() {
         SUDO_USERNAME="1625b6aa-2815-40ec-a218-11e6c0262e52"
         SUDO_PASSWORD="4ae3db97-9ff0-4305-a68d-adbc6e0961ec"
 
-        UVICORN_SSL_CERTFILE="/var/lib/marzban/certs/domain.cert.crt"
-        UVICORN_SSL_KEYFILE="/var/lib/marzban/certs/domain.private.key"
+        UVICORN_SSL_CERTFILE="/var/lib/marzban/certs/'$domain'.cert.crt"
+        UVICORN_SSL_KEYFILE="/var/lib/marzban/certs/'$domain'.private.key"
 
         XRAY_JSON="/var/lib/marzban/xray_config.json"
-        XRAY_SUBSCRIPTION_URL_PREFIX=https://$domain
+        XRAY_SUBSCRIPTION_URL_PREFIX=https://'$domain'
         XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
 
         SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
@@ -224,15 +229,15 @@ ssl_cert_management() {
 
   # Main menu
   echo "SSL Certificate Management Menu"
-  echo "1: Register SSL for marzban (using /var/lib/marzban/certs/)"
-  echo "2: Register SSL for x-ui (using /root/certs/)"
+  echo "1: Register SSL for marzban (using /var/lib/marzban/certs)"
+  echo "2: Register SSL for x-ui (using /root/certs)"
   echo "3: Show SSL Certificate Summary"
   read -p "Select an option (1-3): " choice
 
   case $choice in
     1)
       read -p "Enter the domain for Marzban SSL registration: " domain
-      register_ssl "$domain" "/var/lib/marzban/certs/"
+      register_ssl "$domain" "/var/lib/marzban/certs"
       ;;
     2)
       read -p "Enter the domain for x-ui SSL registration: " domain
