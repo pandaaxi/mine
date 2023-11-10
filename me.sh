@@ -499,122 +499,118 @@ reset_ufw() {
     echo "UFW has been reset and disable"
 }
 
-# Function to setup WordPress with Docker
-setup_wordpress_with_docker() {
-    # Ask for the domain name
-    read -p "Enter your domain name: " DOMAIN
-    read -p "Enter your User name: " DB_NAME
-    read -p "Enter your User Password: " USER_PASSWORD
-    read -p "Enter your Root Password: " ROOT_PASSWORD
+# Function to install OpenVPN AS
+install_openvpn_as() {
+    echo "Installing OpenVPN Access Server..."
 
-    # Update and install required packages
-    apt update -y
-    apt install wget curl nano software-properties-common dirmngr apt-transport-https gnupg gnupg2 ca-certificates lsb-release ubuntu-keyring unzip -y
+    # Check the architecture
+    if [ "$(uname -m)" == "aarch64" ]; then
+        ARCHITECTURE="arm64"
+    else
+        ARCHITECTURE="amd64"
+    fi
 
-    # Create the Docker directory
-    mkdir -p /opt/wordpress
-    cd /opt/wordpress
+    # Install dependencies
+    apt install -y bridge-utils dmidecode iptables iproute2 libc6 libffi7 libgcc-s1 liblz4-1 liblzo2-2 libmariadb3 libpcap0.8 libssl3 libstdc++6 libsasl2-2 libsqlite3-0 net-tools python3-pkg-resources python3-migrate python3-sqlalchemy python3-mysqldb python3-ldap3 sqlite3 zlib1g python3-netaddr python3-arrow python3-lxml python3-constantly python3-hyperlink python3-automat python3-service-identity python3-cffi python3-defusedxml
 
-    mkdir /opt/wordpress/config
-    mkdir -p /opt/wordpress/nginx/vhost
+    # Download and install OpenVPN AS
+    wget https://gitlab.com/jtfu/JOWALL/-/raw/main/OVPN12.12.1/openvpn-as_2.12.1-bc070def-Ubuntu22_"$ARCHITECTURE".deb
+    wget https://gitlab.com/jtfu/JOWALL/-/raw/main/OVPN12.12.1/openvpn-as-bundled-clients-latest.deb
+    dpkg -i openvpn-as-bundled-clients-latest.deb openvpn-as_2.12.1-bc070def-Ubuntu22_"$ARCHITECTURE".deb
 
-    # Create the Docker Compose file with the provided domain
-    cat <<EOF > "/opt/wordpress/docker-compose.yml"
-version: '3.9'
+    # Download and install pyovpn
+    wget https://gitlab.com/jtfu/JOWALL/-/raw/main/OVPN12.12.1/pyovpn-2.0-py3.10.egg
+    cp pyovpn-2.0-py3.10.egg /usr/local/openvpn_as/lib/python/
 
-services:
-  wp:
-    image: wordpress:latest
-    container_name: wordpress-app
-    restart: unless-stopped
-    expose:
-      - 8080
-    volumes:
-      - ./config/php.conf.ini:/usr/local/etc/php/conf.d/conf.ini
-      - ./wp-app:/var/www/html
-      #- ./plugin-name/trunk/:/var/www/html/wp-content/plugins/plugin-name # Plugin development
-      #- ./theme-name/trunk/:/var/www/html/wp-content/themes/theme-name # Theme development
-    environment:
-      WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_NAME: "\${DB_NAME}"
-      WORDPRESS_DB_USER: "\${DB_USER_NAME}"
-      WORDPRESS_DB_PASSWORD: "\${DB_USER_PASSWORD}"
-      VIRTUAL_HOST: $DOMAIN,www.$DOMAIN
-      LETSENCRYPT_HOST: $DOMAIN,www.$DOMAIN
-    depends_on:
-      - db
-    links:
-      - db
+    # Restart OpenVPN AS
+    systemctl restart openvpnas
 
-  db:
-    image: mysql:latest
-    container_name: wordpressdb
-    restart: unless-stopped
-    command: [
-        '--default_authentication_plugin=mysql_native_password',
-        '--character-set-server=utf8mb4',
-        '--collation-server=utf8mb4_unicode_ci'
-    ]
-    volumes:
-      - ./wp-data:/docker-entrypoint-initdb.d
-      - db_data:/var/lib/mysql
-    environment:
-      MYSQL_DATABASE: "\${DB_NAME}"
-      MYSQL_ROOT_PASSWORD: "\${DB_ROOT_PASSWORD}"
-      MYSQL_USER: "\${DB_USER_NAME}"
-      MYSQL_PASSWORD: "\${DB_USER_PASSWORD}"
-
-  nginx:
-    container_name: nginx
-    image: nginxproxy/nginx-proxy
-    restart: unless-stopped
-    ports:
-        - 80:80
-        - 443:443
-    volumes:
-        - /var/run/docker.sock:/tmp/docker.sock:ro
-        - ./nginx/html:/usr/share/nginx/html
-        - ./nginx/certs:/etc/nginx/certs
-        - ./nginx/vhost:/etc/nginx/vhost.d
-    logging:
-        options:
-            max-size: "10m"
-            max-file: "3"
-
-  acme-companion:
-    container_name: acme-companion
-    image: nginxproxy/acme-companion
-    restart: unless-stopped
-    volumes_from:
-        - nginx
-    volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-        - ./nginx/acme:/etc/acme.sh
-    environment:
-        DEFAULT_EMAIL: certbot@gmail.com
-
-volumes:
-  db_data:
-EOF
-
-
-    cat <<EOF > "/opt/wordpress/.env"
-DB_NAME=$DB_NAME
-DB_USER_NAME=$DB_NAME
-DB_USER_PASSWORD=$USER_PASSWORD
-DB_ROOT_PASSWORD=$ROOT_PASSWORD
-EOF
-
-
-    # Start the WordPress setup with Docker Compose
-    docker compose up -d
-
-    # Print the generated passwords
-    echo "Visit wordpress website: https://'${DOMAIN}'/wp-admin/"
-    echo "Generated WORDPRESS_DB_PASSWORD, MYSQL_PASSWORD: '${USER_PASSWORD}'"
-    echo "Generated MYSQL_ROOT_PASSWORD: '${ROOT_PASSWORD}'"
+    echo "OpenVPN Access Server has been installed."
 }
 
+# Function to remove OpenVPN AS
+remove_openvpn_as() {
+    echo "Removing OpenVPN Access Server..."
+
+    # Stop OpenVPN AS service
+    sudo systemctl stop openvpnas.service
+
+    # Remove OpenVPN AS
+    sudo apt-get remove openvpn-as
+
+    # Remove OpenVPN AS directory and user
+    sudo rm -rf /usr/local/openvpn_as/
+    sudo userdel openvpn
+    sudo groupdel openvpn
+
+    # Remove log and temporary directories
+    sudo rm -rf /var/log/openvpnas/
+    sudo rm -rf /tmp/openvpnas/
+
+    echo "OpenVPN Access Server has been removed."
+}
+
+# Function to backup OpenVPN AS
+backup_openvpn_as() {
+    echo "Backing up OpenVPN Access Server..."
+
+    # Install SQLite if not installed
+    which apt > /dev/null 2>&1 && apt -y install sqlite3
+    which yum > /dev/null 2>&1 && yum -y install sqlite
+
+    # Backup OpenVPN AS databases and configuration
+    cd /usr/local/openvpn_as/etc/db
+    [ -e config.db ] && sqlite3 config.db .dump > ../../config.db.bak
+    [ -e certs.db ] && sqlite3 certs.db .dump > ../../certs.db.bak
+    [ -e userprop.db ] && sqlite3 userprop.db .dump > ../../userprop.db.bak
+    [ -e log.db ] && sqlite3 log.db .dump > ../../log.db.bak
+    [ -e config_local.db ] && sqlite3 config_local.db .dump > ../../config_local.db.bak
+    [ -e cluster.db ] && sqlite3 cluster.db .dump > ../../cluster.db.bak
+    [ -e clusterdb.db ] && sqlite3 clusterdb.db .dump > ../../clusterdb.db.bak
+    [ -e notification.db ] && sqlite3 notification.db .dump > ../../notification.db.bak
+
+    # Backup configuration file
+    cp ../as.conf ../../as.conf.bak
+
+    # Create a backup directory
+    mkdir -p /home/ubuntu/dbbackup && cp /usr/local/openvpn_as/*.bak /home/ubuntu/db/
+
+    echo "OpenVPN Access Server has been backed up."
+}
+
+# Function to restore OpenVPN AS backup
+restore_openvpn_as_backup() {
+    echo "Restoring OpenVPN Access Server backup..."
+
+    # Copy backup files to OpenVPN AS directory
+    cp /home/ubuntu/dbbackup/*.bak /usr/local/openvpn_as/
+
+    # Stop OpenVPN AS service
+    service openvpnas stop
+
+    # Install SQLite if not installed
+    which apt > /dev/null 2>&1 && apt -y install sqlite3
+    which yum > /dev/null 2>&1 && yum -y install sqlite
+
+    # Restore OpenVPN AS databases and configuration
+    cd /usr/local/openvpn_as/etc/db
+    [ -e ../../config.db.bak ] && rm config.db; sqlite3 <../../config.db.bak config.db
+    [ -e ../../certs.db.bak ] && rm certs.db; sqlite3 <../../certs.db.bak certs.db
+    [ -e ../../userprop.db.bak ] && rm userprop.db; sqlite3 <../../userprop.db.bak userprop.db
+    [ -e ../../log.db.bak ] && rm log.db; sqlite3 <../../log.db.bak log.db
+    [ -e ../../config_local.db.bak ] && rm config_local.db; sqlite3 <../../config_local.db.bak config_local.db
+    [ -e ../../cluster.db.bak ] && rm cluster.db; sqlite3 <../../cluster.db.bak cluster.db
+    [ -e ../../clusterdb.db.bak ] && rm clusterdb.db; sqlite3 <../../clusterdb.db.bak clusterdb.db
+    [ -e ../../notification.db.bak ] && rm notification.db; sqlite3 <../../notification.db.bak notification.db
+
+    # Restore configuration file
+    [ -e ../../as.conf.bak ] && cp ../../as.conf.bak ../as.conf
+
+    # Start OpenVPN AS service
+    service openvpnas start
+
+    echo "OpenVPN Access Server has been restored from backup."
+}
 
 
 # Main menu
@@ -630,6 +626,7 @@ main_menu() {
         echo "6: Fail2Ban for SSHD"
         echo "7: Fail2Ban status"
         echo "8: Config UFW"
+        echo "9: OpenVPN AS"
         echo "0: Quit"
         echo "00: Update"
 
@@ -642,8 +639,9 @@ main_menu() {
             4) update_repositories ;;
             5) minecraft_pe_server_submenu ;;
             6) fail2bansshd ;;
-            7) fail2banstatus;;
-            8) configure_ufw_security;;
+            7) fail2banstatus ;;
+            8) configure_ufw_security ;;
+            9) openvpn_as_submenu ;;
             0) quit_script ;;
             00) update_script ;;
             *) echo "Invalid option. Please choose a valid option." ;;
@@ -667,7 +665,6 @@ docker_submenu() {
         echo "Docker Sub-Options:"
         echo "1: Install Docker"
         echo "2: Uninstall Docker"
-        echo "3: Install Wordpress"
         echo "0: Back to main menu"
 
         docker ps -a
@@ -677,7 +674,6 @@ docker_submenu() {
         case "$docker_choice" in
             1) install_docker ;;
             2) uninstall_docker ;;
-            3) setup_wordpress_with_docker ;;
             0) break ;;
             *)
                 echo "Invalid option. Please choose a valid option."
@@ -811,6 +807,34 @@ minecraft_pe_server_submenu() {
     done
 }
 
+# Function to manage OpenVPN AS
+openvpn_as_submenu() {
+    while true; do
+        clear
+        echo "OpenVPN AS Menu:"
+        echo "1: Install OpenVPN AS"
+        echo "2: Uninstall OpenVPN AS"
+        echo "3: Backup OpenVPN AS"
+        echo "4: Restore OpenVPN AS"
+        echo "0: Back"
+
+        read -p "Enter your choice: " choice
+
+        case $choice in
+            1) install_openvpn_as ;;
+            2) remove_openvpn_as ;;
+            3) backup_openvpn_as ;;
+            4) restore_openvpn_as_backup ;;
+            0) break ;;
+            *) echo "Invalid option. Please choose a valid option." ;;
+        esac
+
+        read -p "Press any key to return to the OpenVPN AS menu or 'q' to go back to the main menu." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            break
+        fi
+    done
+}
 
 # Function to quit the script
 quit_script() {
