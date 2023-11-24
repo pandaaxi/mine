@@ -70,6 +70,77 @@ install_marzban_node() {
     fi
 }
 
+turn_on_haproxy_marzban() {
+    read -p "Enter 'p' for panel or 'n' for node and 'q' for quit: " choice
+    read -p "Please input your panal domain" domain
+
+    # Update and install haproxy
+    sudo apt update
+    sudo apt install -y haproxy
+
+    # Edit haproxy.cfg file
+    sudo bash -c 'cat <<EOF > /etc/haproxy/haproxy.cfg
+    listen front
+        mode tcp
+        bind *:443
+
+        tcp-request inspect-delay 5s
+        tcp-request content accept if { req_ssl_hello_type 1 }
+
+        use_backend panel if { req.ssl_sni -m end '$domain' }
+ 
+        use_backend reality if { req.ssl_sni -m end www.mysql.com }
+        use_backend reality if { req.ssl_sni -m end www.eepurl.com }
+        use_backend reality if { req.ssl_sni -m end a.teads.tv }
+        use_backend reality if { req.ssl_sni -m end podcasts.apple.com }
+
+        use_backend grpc if { req.ssl_sni -m end crm-crmau.oracle.com }
+        use_backend grpc if { req.ssl_sni -m end www.e-stat.go.jp }
+        use_backend grpc if { req.ssl_sni -m end www.websmultimedia.com }
+        use_backend grpc if { req.ssl_sni -m end www.awana.org }
+
+        default_backend fallback
+
+    backend panel
+        mode tcp
+        server srv1 127.0.0.1:10000
+
+    backend fallback
+        mode tcp
+        server srv1 127.0.0.1:11000
+
+    backend grpc
+        mode tcp
+        server srv1 127.0.0.1:13000
+
+    backend reality
+        mode tcp
+        server srv1 127.0.0.1:12000 send-proxy
+
+EOF'
+
+    sudo systemctl restart haproxy
+
+    if [ "$choice" = "p" ]; then
+        # Set the file path
+        file_path=/opt/marzban/.env
+
+        # Configure Marzban environment file
+        sudo sed -i 's/UVICORN_HOST="0.0.0.0"/UVICORN_HOST="127.0.0.1"/g' "$file_path"
+        sudo sed -i 's/UVICORN_PORT=443/UVICORN_PORT=10000/g' "$file_path"
+
+        # Add XRAY_FALLBACKS_INBOUND_TAG if not present
+        if ! grep -q '^XRAY_FALLBACKS_INBOUND_TAG' "$file_path"; then
+            echo 'XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> "$file_path"
+        fi
+    elif [ "$choice" = "n" ]; then
+        echo "Skipping .env setup for Marzban."
+    else
+        echo "Invalid input. Enter 'p' for panel or 'n' for node."
+    fi
+}
+
+
 # Function to display SSL certificate (Node)
 display_ssl_certificate() {
     echo "Displaying SSL certificate (Node)..."
@@ -745,6 +816,7 @@ main_menu() {
     while true; do
         clear
         echo "Select an option:"
+        echo "Version 1.0.1"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -854,6 +926,7 @@ marzban_submenu() {
         echo "2: Install Marzban Node"
         echo "3: Display SSL certificate (Node)"
         echo "4: Uninstall Marzban"
+        echo "5: Turn on Haproxy"
         echo "0: Back to main menu"
 
         read -p "Enter your choice: " sub_choice
@@ -863,6 +936,7 @@ marzban_submenu() {
             2) install_marzban_node ;;
             3) display_ssl_certificate ;;
             4) uninstall_marzban_submenu ;;
+            5) turn_on_haproxy_marzban ;;
             0) break ;;
             *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
         esac
