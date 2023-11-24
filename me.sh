@@ -292,7 +292,7 @@ ssl_cert_management() {
 
     cd ~
     curl https://get.acme.sh | sh
-    ~/.acme.sh/acme.sh --register-account -m $email_address --issue -d $domain --standalone --key-file $certs_dir/${domain}.private.key --fullchain-file $certs_dir/${domain}.cert.crt --force
+    ~/.acme.sh/acme.sh --register-account -m xxxx@gmail.com --issue -d $domain --standalone --key-file $certs_dir/${domain}.private.key --fullchain-file $certs_dir/${domain}.cert.crt --force
   }
 
   # Consume any remaining input in the buffer
@@ -810,13 +810,11 @@ restore_openvpn_as_backup() {
     echo "OpenVPN Access Server has been restored from backup."
 }
 
-
 # Main menu
 main_menu() {
     while true; do
         clear
         echo "Select an option:"
-        echo "Version 1.0.1"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -1037,11 +1035,13 @@ openvpn_as_submenu() {
     done
 }
 
+
 # Function to quit the script
 quit_script() {
     echo "Exiting..."
     exit 0
 }
+
 
 # Start the main menu
 main_menu
