@@ -70,6 +70,7 @@ install_marzban_node() {
     fi
 }
 
+# Function to install haproxy to marzban
 turn_on_haproxy_marzban() {
     read -p "Enter 'p' for panel or 'n' for node and 'q' for quit: " choice
     read -p "Please input your panel domain: " domain
@@ -121,7 +122,7 @@ turn_on_haproxy_marzban() {
     backend reality
         mode tcp
         server srv1 127.0.0.1:12000 send-proxy
-    ' > /etc/haproxy/haproxy.cfg
+    ' >> /etc/haproxy/haproxy.cfg
 
     # Restart HAProxy service
     sudo systemctl restart haproxy
@@ -566,14 +567,11 @@ fail2bansshd() {
 
     # Remove existing SSH-related configuration files
     rm -rf /etc/fail2ban/jail.d/*
-
-    # Create a new configuration file for SSH (sshd)
-    cat <<EOF > /etc/fail2ban/jail.d/sshd.local
-    [sshd]
+    
+    echo '[sshd]
     enabled = true
     mode   = normal
-    backend = systemd
-EOF
+    backend = systemd' >> /etc/fail2ban/jail.d/sshd.local
 
     # Restart Fail2Ban to apply the configuration changes
     systemctl restart fail2ban
