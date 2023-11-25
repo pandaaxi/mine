@@ -72,52 +72,51 @@ install_marzban_node() {
 
 turn_on_haproxy_marzban() {
     read -p "Enter 'p' for panel or 'n' for node and 'q' for quit: " choice
-    read -p "Please input your panal domain" domain
+    read -p "Please input your panal domain: " domain
 
     # Update and install haproxy
     sudo apt update
     sudo apt install -y haproxy
 
-    # Edit haproxy.cfg file
-    sudo bash -c 'cat <<EOF > /etc/haproxy/haproxy.cfg
-    listen front
-        mode tcp
-        bind *:443
+    sudo bash -c 'cat <<EOF >> /etc/haproxy/haproxy.cfg
+listen front
+    mode tcp
+    bind *:443
 
-        tcp-request inspect-delay 5s
-        tcp-request content accept if { req_ssl_hello_type 1 }
+    tcp-request inspect-delay 5s
+    tcp-request content accept if { req_ssl_hello_type 1 }
 
-        use_backend panel if { req.ssl_sni -m end '$domain' }
- 
-        use_backend reality if { req.ssl_sni -m end www.mysql.com }
-        use_backend reality if { req.ssl_sni -m end www.eepurl.com }
-        use_backend reality if { req.ssl_sni -m end a.teads.tv }
-        use_backend reality if { req.ssl_sni -m end podcasts.apple.com }
+    use_backend panel if { req.ssl_sni -m end '$domain' }
 
-        use_backend grpc if { req.ssl_sni -m end crm-crmau.oracle.com }
-        use_backend grpc if { req.ssl_sni -m end www.e-stat.go.jp }
-        use_backend grpc if { req.ssl_sni -m end www.websmultimedia.com }
-        use_backend grpc if { req.ssl_sni -m end www.awana.org }
+    use_backend reality if { req.ssl_sni -m end www.mysql.com }
+    use_backend reality if { req.ssl_sni -m end www.eepurl.com }
+    use_backend reality if { req.ssl_sni -m end a.teads.tv }
+    use_backend reality if { req.ssl_sni -m end podcasts.apple.com }
 
-        default_backend fallback
+    use_backend grpc if { req.ssl_sni -m end crm-crmau.oracle.com }
+    use_backend grpc if { req.ssl_sni -m end www.e-stat.go.jp }
+    use_backend grpc if { req.ssl_sni -m end www.websmultimedia.com }
+    use_backend grpc if { req.ssl_sni -m end www.awana.org }
 
-    backend panel
-        mode tcp
-        server srv1 127.0.0.1:10000
+    default_backend fallback
 
-    backend fallback
-        mode tcp
-        server srv1 127.0.0.1:11000
+backend panel
+    mode tcp
+    server srv1 127.0.0.1:10000
 
-    backend grpc
-        mode tcp
-        server srv1 127.0.0.1:13000
+backend fallback
+    mode tcp
+    server srv1 127.0.0.1:11000
 
-    backend reality
-        mode tcp
-        server srv1 127.0.0.1:12000 send-proxy
+backend grpc
+    mode tcp
+    server srv1 127.0.0.1:13000
 
-EOF'
+backend reality
+    mode tcp
+    server srv1 127.0.0.1:12000 send-proxy
+
+EOF' | sed '/^$/d' | sudo tee /etc/haproxy/haproxy.cfg > /dev/null
 
     sudo systemctl restart haproxy
 
@@ -140,7 +139,6 @@ EOF'
     fi
 }
 
-
 # Function to display SSL certificate (Node)
 display_ssl_certificate() {
     echo "Displaying SSL certificate (Node)..."
@@ -150,6 +148,7 @@ display_ssl_certificate() {
 # Function to install Marzban Panel
 install_marzban_panel() {
     echo "Installing Marzban Panel..."
+    allow_port_for_marzban
     apt update && apt upgrade -y && sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
 
     # Replace the database
@@ -180,7 +179,6 @@ install_marzban_panel() {
         rm Xray-linux-64.zip
         cd
     fi
-
     # Run script to register SSL for the domain (if provided)
     read -p "Enter the domain for Marzban SSL registration (leave blank to skip): " domain
     if [ -n "$domain" ]; then
@@ -188,8 +186,6 @@ install_marzban_panel() {
         mkdir -p /var/lib/marzban/certs
         
         register_ssl "$domain" "/var/lib/marzban/certs"
-
-
 
         # Configure Marzban environment file
         echo 'UVICORN_HOST="0.0.0.0"
@@ -263,37 +259,31 @@ update_script() {
     fi
 }
 
-# Function for SSL certificate management
+# Function to register SSL certificates with embedded random string generation
+register_ssl() {
+  local domain=$1
+  local certs_dir=$2
+
+  # Generate a random string of specified length
+  local length=5
+  local characters="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+  local random_string=""
+
+  for ((i = 0; i < length; i++)); do
+    rand_index=$((RANDOM % ${#characters}))
+    random_string+=${characters:$rand_index:1}
+  done
+
+  local email_address="${random_string}@gmail.com"
+
+  cd ~
+  curl https://get.acme.sh | sh
+  ~/.acme.sh/acme.sh --register-account -m "$email_address" --issue -d "$domain" --standalone --key-file "$certs_dir/${domain}.private.key" --fullchain-file "$certs_dir/${domain}.cert.crt" --force
+}
+
+# Function for SSL certificate management (Menu)
 ssl_cert_management() {
-  # Function to generate a random string of specified length
-  generate_random_string() {
-    local length=$1
-    local characters="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    local result=""
-
-    for ((i = 0; i < length; i++)); do
-      rand_index=$((RANDOM % ${#characters}))
-      result+=${characters:$rand_index:1}
-    done
-
-    echo $result
-  }
-
-  # Function to register SSL certificates
-  register_ssl() {
-    local domain=$1
-    local certs_dir=$2
-
-    # Generate a random string
-    random_string=$(generate_random_string 5)
-
-    # Construct the email address
-    email_address="${random_string}@gmail.com"
-
-    cd ~
-    curl https://get.acme.sh | sh
-    ~/.acme.sh/acme.sh --register-account -m xxxx@gmail.com --issue -d $domain --standalone --key-file $certs_dir/${domain}.private.key --fullchain-file $certs_dir/${domain}.cert.crt --force
-  }
+  local choice
 
   # Consume any remaining input in the buffer
   read -r -t 0.1 -n 10000
@@ -662,6 +652,7 @@ allow_port_for_marzban() {
     ufw allow 80/tcp
     ufw allow 8080/tcp
     ufw allow 20001,20002,20003,20004/tcp
+    sudo ufw reload
     ufw status
     echo "Ports for Marzban have been allowed."
 }
@@ -673,6 +664,7 @@ allow_port_for_wordpress() {
     ufw allow 22/tcp
     ufw allow 443/tcp
     ufw allow 80/tcp
+    sudo ufw reload
     ufw status
     echo "Ports for Wordpress have been allowed."
 }
@@ -685,6 +677,7 @@ allow_port_for_openvpn() {
     ufw allow 443/tcp
     ufw allow 943/tcp
     ufw allow 1194/udp
+    sudo ufw reload
     ufw status
     echo "Ports for OpenVPN have been allowed."
 }
