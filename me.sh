@@ -74,6 +74,12 @@ turn_on_haproxy_marzban() {
     read -p "Enter 'p' for panel or 'n' for node and 'q' for quit: " choice
     read -p "Please input your panal domain: " domain
 
+    #remove existed haproxy
+    sudo systemctl unmask haproxy
+    sudo systemctl stop haproxy
+    sudo systemctl disable haproxy
+    sudo apt-get purge haproxy
+
     # Update and install haproxy
     sudo apt update
     sudo apt install -y haproxy
