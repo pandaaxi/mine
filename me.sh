@@ -72,58 +72,58 @@ install_marzban_node() {
 
 turn_on_haproxy_marzban() {
     read -p "Enter 'p' for panel or 'n' for node and 'q' for quit: " choice
-    read -p "Please input your panal domain: " domain
+    read -p "Please input your panel domain: " domain
 
-    #remove existed haproxy
+    # Remove existing HAProxy
     sudo systemctl unmask haproxy
     sudo systemctl stop haproxy
     sudo systemctl disable haproxy
     sudo apt-get purge haproxy
 
-    # Update and install haproxy
+    # Update and install HAProxy
     sudo apt update
     sudo apt install -y haproxy
 
-    sudo bash -c 'cat <<EOF >> /etc/haproxy/haproxy.cfg
-listen front
-    mode tcp
-    bind *:443
+    # Configure HAProxy using echo and tee
+    echo 'listen front
+        mode tcp
+        bind *:443
 
-    tcp-request inspect-delay 5s
-    tcp-request content accept if { req_ssl_hello_type 1 }
+        tcp-request inspect-delay 5s
+        tcp-request content accept if { req_ssl_hello_type 1 }
 
-    use_backend panel if { req.ssl_sni -m end '$domain' }
+        use_backend panel if { req.ssl_sni -m end '$domain' }
 
-    use_backend reality if { req.ssl_sni -m end www.mysql.com }
-    use_backend reality if { req.ssl_sni -m end www.eepurl.com }
-    use_backend reality if { req.ssl_sni -m end a.teads.tv }
-    use_backend reality if { req.ssl_sni -m end podcasts.apple.com }
+        use_backend reality if { req.ssl_sni -m end www.mysql.com }
+        use_backend reality if { req.ssl_sni -m end www.eepurl.com }
+        use_backend reality if { req.ssl_sni -m end a.teads.tv }
+        use_backend reality if { req.ssl_sni -m end podcasts.apple.com }
 
-    use_backend grpc if { req.ssl_sni -m end crm-crmau.oracle.com }
-    use_backend grpc if { req.ssl_sni -m end www.e-stat.go.jp }
-    use_backend grpc if { req.ssl_sni -m end www.websmultimedia.com }
-    use_backend grpc if { req.ssl_sni -m end www.awana.org }
+        use_backend grpc if { req.ssl_sni -m end crm-crmau.oracle.com }
+        use_backend grpc if { req.ssl_sni -m end www.e-stat.go.jp }
+        use_backend grpc if { req.ssl_sni -m end www.websmultimedia.com }
+        use_backend grpc if { req.ssl_sni -m end www.awana.org }
 
-    default_backend fallback
+        default_backend fallback
 
-backend panel
-    mode tcp
-    server srv1 127.0.0.1:10000
+    backend panel
+        mode tcp
+        server srv1 127.0.0.1:10000
 
-backend fallback
-    mode tcp
-    server srv1 127.0.0.1:11000
+    backend fallback
+        mode tcp
+        server srv1 127.0.0.1:11000
 
-backend grpc
-    mode tcp
-    server srv1 127.0.0.1:13000
+    backend grpc
+        mode tcp
+        server srv1 127.0.0.1:13000
 
-backend reality
-    mode tcp
-    server srv1 127.0.0.1:12000 send-proxy
+    backend reality
+        mode tcp
+        server srv1 127.0.0.1:12000 send-proxy
+    ' > /etc/haproxy/haproxy.cfg
 
-EOF' | sed '/^$/d' | sudo tee /etc/haproxy/haproxy.cfg > /dev/null
-
+    # Restart HAProxy service
     sudo systemctl restart haproxy
 
     if [ "$choice" = "p" ]; then
@@ -133,17 +133,18 @@ EOF' | sed '/^$/d' | sudo tee /etc/haproxy/haproxy.cfg > /dev/null
         # Configure Marzban environment file
         sudo sed -i 's/UVICORN_HOST="0.0.0.0"/UVICORN_HOST="127.0.0.1"/g' "$file_path"
         sudo sed -i 's/UVICORN_PORT=443/UVICORN_PORT=10000/g' "$file_path"
+        echo '      XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> "$file_path"
 
-        # Add XRAY_FALLBACKS_INBOUND_TAG if not present
-        if ! grep -q '^XRAY_FALLBACKS_INBOUND_TAG' "$file_path"; then
-            echo 'XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> "$file_path"
-        fi
+        # Restart Marzban
+        marzban restart
+
     elif [ "$choice" = "n" ]; then
         echo "Skipping .env setup for Marzban."
     else
         echo "Invalid input. Enter 'p' for panel or 'n' for node."
     fi
 }
+
 
 # Function to display SSL certificate (Node)
 display_ssl_certificate() {
@@ -208,7 +209,7 @@ install_marzban_panel() {
         XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
 
         SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
-        ' > /opt/marzban/.env
+        ' >> /opt/marzban/.env
     else
         # Configure Marzban environment file without SSL details
         echo 'UVICORN_HOST="0.0.0.0"
@@ -285,40 +286,6 @@ register_ssl() {
   cd ~
   curl https://get.acme.sh | sh
   ~/.acme.sh/acme.sh --register-account -m "$email_address" --issue -d "$domain" --standalone --key-file "$certs_dir/${domain}.private.key" --fullchain-file "$certs_dir/${domain}.cert.crt" --force
-}
-
-# Function for SSL certificate management (Menu)
-ssl_cert_management() {
-  local choice
-
-  # Consume any remaining input in the buffer
-  read -r -t 0.1 -n 10000
-
-  # Main menu
-  echo "SSL Certificate Management Menu"
-  echo "1: Register SSL for marzban (using /var/lib/marzban/certs)"
-  echo "2: Register SSL for x-ui (using /root/certs)"
-  echo "3: Show SSL Certificate Summary"
-  read -p "Select an option (1-3): " choice
-
-  case $choice in
-    1)
-      read -p "Enter the domain for Marzban SSL registration: " domain
-      register_ssl "$domain" "/var/lib/marzban/certs"
-      ;;
-    2)
-      read -p "Enter the domain for x-ui SSL registration: " domain
-      register_ssl "$domain" "/root/certs/"
-      ;;
-    3)
-      echo "SSL Certificates Summary:"
-      echo "Marzban: $(ls /var/lib/marzban/certs/ | grep -c '.cert.crt') certificates registered"
-      echo "x-ui: $(ls /root/certs/ | grep -c '.cert.crt') certificates registered"
-      ;;
-    *)
-      echo "Invalid choice. Please select a valid option."
-      ;;
-  esac
 }
 
 # Function to update repositories
@@ -854,6 +821,40 @@ main_menu() {
 
 
 # Sub Menu
+# SUb menu for SSL certificate management (Menu)
+ssl_cert_management() {
+  local choice
+
+  # Consume any remaining input in the buffer
+  read -r -t 0.1 -n 10000
+
+  # Main menu
+  echo "SSL Certificate Management Menu"
+  echo "1: Register SSL for marzban (using /var/lib/marzban/certs)"
+  echo "2: Register SSL for x-ui (using /root/certs)"
+  echo "3: Show SSL Certificate Summary"
+  read -p "Select an option (1-3): " choice
+
+  case $choice in
+    1)
+      read -p "Enter the domain for Marzban SSL registration: " domain
+      register_ssl "$domain" "/var/lib/marzban/certs"
+      ;;
+    2)
+      read -p "Enter the domain for x-ui SSL registration: " domain
+      register_ssl "$domain" "/root/certs/"
+      ;;
+    3)
+      echo "SSL Certificates Summary:"
+      echo "Marzban: $(ls /var/lib/marzban/certs/ | grep -c '.cert.crt') certificates registered"
+      echo "x-ui: $(ls /root/certs/ | grep -c '.cert.crt') certificates registered"
+      ;;
+    *)
+      echo "Invalid choice. Please select a valid option."
+      ;;
+  esac
+}
+
 # Sub-menu for Docker options
 docker_submenu() {
     while true; do
@@ -1043,4 +1044,5 @@ quit_script() {
 
 
 # Start the main menu
+echo "v1.0.1"
 main_menu
