@@ -74,6 +74,23 @@ install_marzban_node() {
 turn_on_haproxy_marzban() {
     read -p "Enter 'p' for panel or 'n' for node and 'q' for quit: " choice
     read -p "Please input your panel domain: " domain
+    if [ "$choice" = "p" ]; then
+        # Set the file path
+        file_path=/opt/marzban/.env
+
+        # Configure Marzban environment file
+        sudo sed -i 's/UVICORN_HOST="0.0.0.0"/UVICORN_HOST="127.0.0.1"/g' "$file_path"
+        sudo sed -i 's/UVICORN_PORT=443/UVICORN_PORT=10000/g' "$file_path"
+        echo '      XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> "$file_path"
+
+        # Restart Marzban
+        marzban restart
+
+    elif [ "$choice" = "n" ]; then
+        echo "Skipping .env setup for Marzban."
+    else
+        echo "Invalid input. Enter 'p' for panel or 'n' for node."
+    fi
 
     # Remove existing HAProxy
     sudo systemctl unmask haproxy
@@ -126,24 +143,6 @@ turn_on_haproxy_marzban() {
 
     # Restart HAProxy service
     sudo systemctl restart haproxy
-
-    if [ "$choice" = "p" ]; then
-        # Set the file path
-        file_path=/opt/marzban/.env
-
-        # Configure Marzban environment file
-        sudo sed -i 's/UVICORN_HOST="0.0.0.0"/UVICORN_HOST="127.0.0.1"/g' "$file_path"
-        sudo sed -i 's/UVICORN_PORT=443/UVICORN_PORT=10000/g' "$file_path"
-        echo '      XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> "$file_path"
-
-        # Restart Marzban
-        marzban restart
-
-    elif [ "$choice" = "n" ]; then
-        echo "Skipping .env setup for Marzban."
-    else
-        echo "Invalid input. Enter 'p' for panel or 'n' for node."
-    fi
 }
 
 
