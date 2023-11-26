@@ -54,19 +54,49 @@ install_marzban_node() {
             echo "Docker is not installed. Please install Docker first."
         fi
     else
-        # Update package list
+        #update package list
         apt-get update
-
+        
         # Clone the Marzban-Node repository
         cd ~
         git clone https://github.com/Gozargah/Marzban-node
         cd Marzban-node
 
+        # Remove existing docker-compose.yml
+        rm "docker-compose.yml"
+
+        # Create a new docker-compose.yml
+        echo 'services:
+          marzban-node:
+            image: gozargah/marzban-node:latest
+            restart: always
+            network_mode: host
+
+            environment:
+              SSL_CLIENT_CERT_FILE: "/var/lib/marzban-node/ssl_client_cert.pem"
+
+            volumes:
+              - /var/lib/marzban-node:/var/lib/marzban-node' > docker-compose.yml
+          
+        echo "Created new docker-compose.yml"
+
         # Start the Docker Compose service
         docker compose up -d
 
-        #SSL
-        cat /var/lib/marzban-node/ssl_cert.pem
+        # Ask for SSL certificate location
+        read -p "Please provide the path for SSL certificate: " ssl_cert_path
+
+        # Remove ssl_client_cert.pem
+        rm "/var/lib/marzban-node/ssl_client_cert.pem"
+
+        # Create a new ssl_client_cert.pem with provided path
+        echo "$ssl_cert_path" > /var/lib/marzban-node/ssl_client_cert.pem
+
+        echo "SSL certificate updated at /var/lib/marzban-node/ssl_client_cert.pem"
+
+        # Restart Docker Compose
+        docker compose down -v
+        docker compose up -d
     fi
 }
 
