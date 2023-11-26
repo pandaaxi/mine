@@ -56,7 +56,7 @@ install_marzban_node() {
     else
         #update package list
         apt-get update
-        
+
         # Clone the Marzban-Node repository
         cd ~
         git clone https://github.com/Gozargah/Marzban-node
@@ -66,25 +66,27 @@ install_marzban_node() {
         rm "docker-compose.yml"
 
         # Create a new docker-compose.yml
-        echo 'services:
-          marzban-node:
-            image: gozargah/marzban-node:latest
-            restart: always
-            network_mode: host
+        cat <<EOF > docker-compose.yml
+services:
+  marzban-node:
+    image: gozargah/marzban-node:latest
+    restart: always
+    network_mode: host
 
-            environment:
-              SSL_CLIENT_CERT_FILE: "/var/lib/marzban-node/ssl_client_cert.pem"
+    environment:
+      SSL_CLIENT_CERT_FILE: "/var/lib/marzban-node/ssl_client_cert.pem"
 
-            volumes:
-              - /var/lib/marzban-node:/var/lib/marzban-node' > docker-compose.yml
-          
+    volumes:
+      - /var/lib/marzban-node:/var/lib/marzban-node
+EOF
         echo "Created new docker-compose.yml"
 
         # Start the Docker Compose service
         docker compose up -d
 
         # Ask for SSL certificate location
-        read -p "Please provide the path for SSL certificate: " ssl_cert_path
+        echo "Please paste the SSL certificate content below (press Ctrl+D when finished):"
+        ssl_cert_path=$(</dev/stdin)
 
         # Remove ssl_client_cert.pem
         rm "/var/lib/marzban-node/ssl_client_cert.pem"
@@ -100,18 +102,16 @@ install_marzban_node() {
     fi
 }
 
+
 # Function to install haproxy to marzban
 turn_on_haproxy_marzban() {
-    read -p "Enter 'p' for panel or 'n' for node and 'q' for quit: " choice
+    read -p "Enter 'p' for panel or 'n' for node: " choice
     read -p "Please input your panel domain: " domain
     if [ "$choice" = "p" ]; then
-        # Set the file path
-        file_path=/opt/marzban/.env
-
         # Configure Marzban environment file
-        sudo sed -i 's/UVICORN_HOST="0.0.0.0"/UVICORN_HOST="127.0.0.1"/g' "$file_path"
-        sudo sed -i 's/UVICORN_PORT=443/UVICORN_PORT=10000/g' "$file_path"
-        echo '      XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> "$file_path"
+        sudo sed -i 's/UVICORN_HOST="0.0.0.0"/UVICORN_HOST="127.0.0.1"/g' /opt/marzban/.env
+        sudo sed -i 's/UVICORN_PORT=443/UVICORN_PORT=10000/g' /opt/marzban/.env
+        echo '      XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> /opt/marzban/.env
 
         # Restart Marzban
         marzban restart
