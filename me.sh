@@ -175,13 +175,6 @@ turn_on_haproxy_marzban() {
     sudo systemctl restart haproxy
 }
 
-
-# Function to display SSL certificate (Node)
-display_ssl_certificate() {
-    echo "Displaying SSL certificate (Node)..."
-    cat /var/lib/marzban-node/ssl_cert.pem
-}
-
 # Function to install Marzban Panel
 install_marzban_panel() {
     echo "Installing Marzban Panel..."
@@ -316,6 +309,12 @@ register_ssl() {
   cd ~
   curl https://get.acme.sh | sh
   ~/.acme.sh/acme.sh --register-account -m "$email_address" --issue -d "$domain" --standalone --key-file "$certs_dir/${domain}.private.key" --fullchain-file "$certs_dir/${domain}.cert.crt" --force
+}
+
+# Function to display SSL certificate (Node)
+display_ssl_certificate() {
+    echo "Displaying SSL certificate (Node)..."
+    cat /var/lib/marzban-node/ssl_cert.pem
 }
 
 # Function to update repositories
@@ -865,11 +864,13 @@ ssl_cert_management() {
   case $choice in
     1)
       read -p "Enter the domain for Marzban SSL registration: " domain
+      mkdir -p /var/lib/marzban/certs
       register_ssl "$domain" "/var/lib/marzban/certs"
       ;;
     2)
       read -p "Enter the domain for x-ui SSL registration: " domain
-      register_ssl "$domain" "/root/certs/"
+      mkdir -p /root/certs
+      register_ssl "$domain" "/root/certs"
       ;;
     3)
       echo "SSL Certificates Summary:"
