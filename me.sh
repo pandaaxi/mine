@@ -802,6 +802,92 @@ restore_openvpn_as_backup() {
     echo "OpenVPN Access Server has been restored from backup."
 }
 
+# Function for WGCF
+# Function to register WGCF
+registerwg() {
+    ./wgcf register
+    sleep 2 # Adding a delay of 2 seconds
+    cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
+}
+
+# Function to generate configuration
+generate() {
+    # Fetching device_id and access_token from wgcf-account.toml
+    device_id=$(grep -oP "device_id = '\K[^']+" wgcf-account.toml)
+    access_token=$(grep -oP "access_token = '\K[^']+" wgcf-account.toml)
+
+    # Fetching information using curl command
+    response=$(curl --request GET "https://api.cloudflareclient.com/v0a2158/reg/${device_id}" \
+        --silent \
+        --location \
+        --header 'User-Agent: okhttp/3.12.1' \
+        --header 'CF-Client-Version: a-6.10-2158' \
+        --header 'Content-Type: application/json' \
+        --header "Authorization: Bearer ${access_token}")
+
+    # Extracting client_id from the response
+    client_id=$(echo "$response" | jq -r '.config.client_id')
+
+    # Converting client_id into array format [14, 116, 111]
+    client_id_array=$(echo "$client_id" | base64 -d | xxd -p | fold -w2 | while read HEX; do printf '%d ' "0x${HEX}"; done | awk '{print "["$1", "$2", "$3"]"}')
+
+    ./wgcf generate
+
+    sleep 2 # Adding a delay of 2 seconds
+
+    # Fetching PrivateKey and Address from wgcf-profile.conf
+    private_key=$(grep -oP "PrivateKey = \K[^ ]+" wgcf-profile.conf)
+    addresses=$(grep -oP "Address = \K[^ ]+" wgcf-profile.conf)
+
+    # Extracting individual IPv4 and IPv6 addresses
+    ipv4=$(echo "$addresses" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+')
+    ipv6=$(echo "$addresses" | grep -Eo '([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}/[0-9]+')
+    # Creating wireguard.json file
+    cat > wireguard.json <<EOF
+{
+    "tag": "xray-wg-warp",
+    "protocol": "wireguard",
+    "settings": {
+        "secretKey": "$private_key",
+        "address": [
+            "$ipv4",
+            "$ipv6"
+        ],
+        "peers": [
+            {
+                "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+                "allowedIPs": [
+                    "0.0.0.0/0",
+                    "::/0"
+                ],
+                "endpoint": "162.159.193.10:2408"
+            }
+        ],
+        "reserved": $client_id_array
+    }
+}
+EOF
+    sleep 2
+    echo "wireguard.json file created successfully."
+    cat wireguard.json
+}
+
+# Function to check status
+check_status() {
+    ./wgcf status
+}
+
+# Function to trace
+trace() {
+    ./wgcf trace
+}
+
+# Function to change license key
+change_key() {
+    read -p "Enter the new WGCF license key: " new_key
+    WGCF_LICENSE_KEY="$new_key" ./wgcf update
+}
+
 # Main menu
 main_menu() {
     while true; do
@@ -816,6 +902,7 @@ main_menu() {
         echo "7: Fail2Ban status"
         echo "8: Config UFW"
         echo "9: OpenVPN AS"
+        echo "10: wgcf"
         echo "0: Quit"
         echo "00: Update"
 
@@ -831,6 +918,7 @@ main_menu() {
             7) fail2banstatus ;;
             8) configure_ufw_security ;;
             9) openvpn_as_submenu ;;
+            10) wgcf ;;
             0) quit_script ;;
             00) update_script ;;
             *) echo "Invalid option. Please choose a valid option." ;;
@@ -843,7 +931,6 @@ main_menu() {
         fi
     done
 }
-
 
 
 # Sub Menu
@@ -902,6 +989,45 @@ docker_submenu() {
             0) break ;;
             *)
                 echo "Invalid option. Please choose a valid option."
+                ;;
+        esac
+    done
+}
+
+# Sub-menu for wgcf
+wgcf() {
+    while true; do
+        echo "Choose an option:"
+        echo "1. Register"
+        echo "2. Generate configuration"
+        echo "3. Check status"
+        echo "4. Trace"
+        echo "5. Change License Key"
+        echo "0. Back to main menu"
+
+        read -p "Enter your choice: " choice
+
+        case $choice in
+            1)
+                registerwg
+                ;;
+            2)
+                generate
+                ;;
+            3)
+                check_status
+                ;;
+            4)
+                trace
+                ;;
+            5)
+                change_key
+                ;;
+            0)
+                break
+                ;;
+            *)
+                echo "Invalid choice. Please enter a valid option."
                 ;;
         esac
     done
