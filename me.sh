@@ -802,16 +802,42 @@ restore_openvpn_as_backup() {
     echo "OpenVPN Access Server has been restored from backup."
 }
 
-# Function for WGCF
-# Function to register WGCF
-registerwg() {
-    ./wgcf register
-    sleep 2 # Adding a delay of 2 seconds
-    cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
-}
 
 # Function to generate configuration
 generate() {
+    wgcf_file="/root/warpgen/wgcf"
+
+    # Check if wgcf file already exists
+    if [ ! -e "$wgcf_file" ]; then
+        # Check the system's architecture
+        mkdir -p /root/warpgen/
+        arch=$(uname -m)
+
+        if [ "$arch" == "x86_64" ]; then
+            echo "Downloading for AMD..."
+            wget -O "$wgcf_file" https://github.com/ViRb3/wgcf/releases/download/v2.2.19/wgcf_2.2.19_linux_amd64
+        elif [ "$arch" == "aarch64" ]; then
+            echo "Downloading for ARM..."
+            wget -O "$wgcf_file" https://github.com/ViRb3/wgcf/releases/download/v2.2.19/wgcf_2.2.19_linux_arm64
+        else
+            echo "Unsupported architecture: $arch"
+            exit 1
+        fi
+
+        chmod +x "$wgcf_file"  # Make the downloaded file executable
+    else
+        echo "wgcf file already exists. Skipping download."
+    fi
+    cd /root/warpgen/
+
+    rm -fr wgcf-account.toml
+    ./wgcf register
+    sleep 2 # Adding a delay of 2 seconds
+    cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
+    read -p "Enter the new WGCF license key: " new_key
+    WGCF_LICENSE_KEY="$new_key" ./wgcf update
+    sleep 2
+    cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
     # Fetching device_id and access_token from wgcf-account.toml
     device_id=$(grep -oP "device_id = '\K[^']+" wgcf-account.toml)
     access_token=$(grep -oP "access_token = '\K[^']+" wgcf-account.toml)
@@ -874,19 +900,21 @@ EOF
 
 # Function to check status
 check_status() {
+    cd /home/ubuntu/warpgen/
     ./wgcf status
 }
 
 # Function to trace
 trace() {
+    cd /home/ubuntu/warpgen/
     ./wgcf trace
 }
 
 # Function to change license key
-change_key() {
-    read -p "Enter the new WGCF license key: " new_key
-    WGCF_LICENSE_KEY="$new_key" ./wgcf update
-}
+#change_key() {
+    #read -p "Enter the new WGCF license key: " new_key
+    #WGCF_LICENSE_KEY="$new_key" ./wgcf update
+#}
 
 # Main menu
 main_menu() {
@@ -998,30 +1026,22 @@ docker_submenu() {
 wgcf() {
     while true; do
         echo "Choose an option:"
-        echo "1. Register"
-        echo "2. Generate configuration"
-        echo "3. Check status"
-        echo "4. Trace"
-        echo "5. Change License Key"
+        echo "1. Generate configuration"
+        echo "2. Check status"
+        echo "3. Trace"
         echo "0. Back to main menu"
 
         read -p "Enter your choice: " choice
 
         case $choice in
             1)
-                registerwg
-                ;;
-            2)
                 generate
                 ;;
-            3)
+            2)
                 check_status
                 ;;
-            4)
+            3)
                 trace
-                ;;
-            5)
-                change_key
                 ;;
             0)
                 break
