@@ -5,6 +5,14 @@
 install_docker() {
     clear
     echo "Installing Docker..."
+    DIR="/root/containers/"
+    if [ ! -d "$DIR" ]; then
+        mkdir -p "$DIR"
+        echo "Directory $DIR created."
+    else
+        cd "$DIR"
+        echo "Changed directory to $DIR."
+    fi
 
     curl -fsSL https://get.docker.com | sh
     systemctl start docker
@@ -43,6 +51,131 @@ uninstall_docker() {
     esac
 }
 
+# Function to install Caddy
+install_caddy() {
+    echo "Installing Caddy..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
+        if [ "$docker_choice" == "y" ]; then
+            install_docker
+        else
+            echo "Docker is not installed. Please install Docker first."
+            return
+        fi
+    fi
+
+    mkdir -p /root/containers/caddy && touch /root/containers/caddy/Caddyfile
+    cd /root/containers/caddy
+
+    read -p "Enter the domain for caddy: " caddy_domain
+    echo "Updating Caddyfile for $caddy_domain..."
+    {
+        echo "{"
+        echo "  email mail@$caddy_domain"
+        echo "}"
+    } >> /root/containers/caddy/Caddyfile
+    echo "Caddyfile updated."
+
+        cat <<EOF > docker-compose.yml
+version: '3.3'
+
+networks:
+  caddy:
+
+services:
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    container_name: caddy
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /root/containers/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - /root/containers/caddy/site:/srv
+      - /root/containers/caddy/caddy_data:/data
+      - /root/containers/caddy/caddy_config:/config
+    networks:
+      - caddy
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+}
+
+# Function to install alist
+install_alist() {
+    echo "Installing alist..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
+        if [ "$docker_choice" == "y" ]; then
+            install_docker
+        else
+            echo "Docker is not installed. Please install Docker first."
+            return
+        fi
+    fi
+
+    # Check if the Caddy container is running
+    if [ -z "$(docker ps -q -f name=caddy)" ]; then
+        echo "Caddy container is not running."
+        read -p "Do you want to install and run Caddy? (y/n) " caddy_choice
+        if [ "$caddy_choice" == "y" ]; then
+            install_caddy
+        fi
+    fi
+
+    # Ask for the alist domain and update Caddyfile
+    read -p "Enter the domain for alist: " alist_domain
+    echo "Updating Caddyfile for $alist_domain..."
+    {
+        echo "$alist_domain {"
+        echo "  reverse_proxy alist:5244"
+        echo "}"
+    } >> /root/containers/caddy/Caddyfile
+    echo "Caddyfile updated."
+    
+    #continue install alist
+    mkdir -p /root/containers/alist
+    cd /root/containers/alist
+
+        cat <<EOF > docker-compose.yml
+version: '3.3'
+
+networks:
+  caddy:
+
+services:
+    alist:
+        image: 'xhofe/alist:latest'
+        container_name: alist
+        restart: unless-stopped
+        volumes:
+            - /etc/alist:/opt/alist/data
+        ports:
+            - 5244:5244
+        environment:
+            - PUID=0
+            - PGID=0
+            - UMASK=022
+        networks:
+            - caddy
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+        docker exec -it alist ./alist admin random
+}
+
 # Function to install Marzban-Node
 install_marzban_node() {
     echo "Installing Marzban-Node..."
@@ -54,13 +187,14 @@ install_marzban_node() {
             echo "Docker is not installed. Please install Docker first."
         fi
     else
+
         #update package list
+        cd /root/containers/
         apt-get update
 
         # Clone the Marzban-Node repository
-        cd ~
         git clone https://github.com/Gozargah/Marzban-node
-        cd Marzban-node
+        cd /root/containers/Marzban-node
 
         # Remove existing docker-compose.yml
         rm "docker-compose.yml"
@@ -147,10 +281,10 @@ turn_on_haproxy_marzban() {
         use_backend reality if { req.ssl_sni -m end a.teads.tv }
         use_backend reality if { req.ssl_sni -m end podcasts.apple.com }
 
-        use_backend grpc if { req.ssl_sni -m end crm-crmau.oracle.com }
-        use_backend grpc if { req.ssl_sni -m end www.e-stat.go.jp }
-        use_backend grpc if { req.ssl_sni -m end www.websmultimedia.com }
-        use_backend grpc if { req.ssl_sni -m end www.awana.org }
+        use_backend grpc if { req.ssl_sni -m end www.naruto-official.com }
+        use_backend grpc if { req.ssl_sni -m end www.eventbrite.com }
+        use_backend grpc if { req.ssl_sni -m end www.booking.com }
+        use_backend grpc if { req.ssl_sni -m end www.trustpilot.com }
 
         default_backend fallback
 
@@ -178,6 +312,18 @@ turn_on_haproxy_marzban() {
 # Function to install Marzban Panel
 install_marzban_panel() {
     echo "Installing Marzban Panel..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
+        if [ "$docker_choice" == "y" ]; then
+            install_docker
+        else
+            echo "Docker is not installed. Please install Docker first."
+            return
+        fi
+    fi
+
     allow_port_for_marzban
     apt update && apt upgrade -y && sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
 
@@ -364,10 +510,10 @@ install_minecraft_pe_server() {
     fi
 
     # Create a directory for the Minecraft server
-    mkdir -p "/root/minecraft/$server_name"
+    mkdir -p "/containers/minecraft/$server_name"
 
     # Create a Docker Compose configuration for the Minecraft server
-    cat <<EOF > "/root/minecraft/$server_name/docker-compose.yml"
+    cat <<EOF > "/containers/minecraft/$server_name/docker-compose.yml"
 version: '3'
 services:
   minecraft-bedrock-server:
@@ -381,11 +527,11 @@ EOF
 
     # Add the level seed if provided
     if [ -n "$level_seed" ]; then
-        echo "      - LEVEL_SEED=$level_seed" >> "/root/minecraft/$server_name/docker-compose.yml"
+        echo "      - LEVEL_SEED=$level_seed" >> "/containers/minecraft/$server_name/docker-compose.yml"
     fi
 
     # Add the rest of the configuration
-    cat <<EOF >> "/root/minecraft/$server_name/docker-compose.yml"
+    cat <<EOF >> "/containers/minecraft/$server_name/docker-compose.yml"
     ports:
       - "$server_port:$server_port/udp"
     volumes:
@@ -396,7 +542,7 @@ volumes:
 EOF
 
     # Start the Minecraft server
-    cd "/root/minecraft/$server_name"
+    cd "/containers/minecraft/$server_name"
     docker-compose up -d
 
     # Print server information
@@ -446,14 +592,14 @@ remove_minecraft_pe_server() {
             fi
 
             # Remove the server using Docker Compose
-            cd "/root/minecraft/$server"
+            cd "/containers/minecraft/$server"
             docker-compose down
 
             # Remove the Docker Compose configuration
-            rm -f "/root/minecraft/$server/docker-compose.yml"
+            rm -f "/containers/minecraft/$server/docker-compose.yml"
 
             # Remove the server folder
-            rm -rf "/root/minecraft/$server"
+            rm -rf "/containers/minecraft/$server"
         done
 
         # Remove all server data volumes
@@ -470,14 +616,14 @@ remove_minecraft_pe_server() {
         fi
 
         # Remove the server using Docker Compose
-        cd "/root/minecraft/$server_name"
+        cd "/containers/minecraft/$server_name"
         docker-compose down
 
         # Remove the Docker Compose configuration
-        rm -f "/root/minecraft/$server_name/docker-compose.yml"
+        rm -f "/containers/minecraft/$server_name/docker-compose.yml"
 
         # Remove the server folder
-        rm -rf "/root/minecraft/$server_name"
+        rm -rf "/containers/minecraft/$server_name"
 
         # Remove the server data volume
         docker volume rm "$server_name"
@@ -521,7 +667,7 @@ edit_minecraft_pe_server() {
     fi
 
     # Get the current server directory
-    server_directory="/root/minecraft/$server_name"
+    server_directory="/containers/minecraft/$server_name"
 
     # Stop the Minecraft server using Docker Compose
     (cd "$server_directory" && docker-compose down)
@@ -843,13 +989,13 @@ generate() {
     access_token=$(grep -oP "access_token = '\K[^']+" wgcf-account.toml)
 
     # Fetching information using curl command
-    response=$(curl --request GET "https://api.cloudflareclient.com/v0a2158/reg/${device_id}" \
+    response=$(curl --request GET "https://api.cloudflareclient.com/v0a2158/reg/$device_id" \
         --silent \
         --location \
         --header 'User-Agent: okhttp/3.12.1' \
         --header 'CF-Client-Version: a-6.10-2158' \
         --header 'Content-Type: application/json' \
-        --header "Authorization: Bearer ${access_token}")
+        --header "Authorization: Bearer $access_token")
 
     # Extracting client_id from the response
     client_id=$(echo "$response" | jq -r '.config.client_id')
@@ -1005,6 +1151,8 @@ docker_submenu() {
         echo "Docker Sub-Options:"
         echo "1: Install Docker"
         echo "2: Uninstall Docker"
+        echo "3: Install Caddy"
+        echo "4: Install Alist"
         echo "0: Back to main menu"
 
         docker ps -a
@@ -1014,6 +1162,8 @@ docker_submenu() {
         case "$docker_choice" in
             1) install_docker ;;
             2) uninstall_docker ;;
+            3) install_caddy ;;
+            4) install_alist ;;
             0) break ;;
             *)
                 echo "Invalid option. Please choose a valid option."
