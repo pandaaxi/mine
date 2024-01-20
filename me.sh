@@ -79,7 +79,7 @@ install_caddy() {
     echo "Caddyfile updated."
 
         cat <<EOF > docker-compose.yml
-version: '3.3'
+version: '3.8'
 
 networks:
   caddy:
@@ -149,7 +149,7 @@ install_alist() {
     cd /root/containers/alist
 
         cat <<EOF > docker-compose.yml
-version: '3.3'
+version: '3.8'
 
 networks:
   caddy:
@@ -514,7 +514,7 @@ install_minecraft_pe_server() {
 
     # Create a Docker Compose configuration for the Minecraft server
     cat <<EOF > "/containers/minecraft/$server_name/docker-compose.yml"
-version: '3'
+version: '3.8'
 services:
   minecraft-bedrock-server:
     image: itzg/minecraft-bedrock-server
@@ -1070,7 +1070,7 @@ trace() {
 main_menu() {
     while true; do
         clear
-        echo "Select an option:"
+        echo "Select an option:v1.0"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
