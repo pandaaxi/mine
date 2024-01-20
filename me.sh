@@ -523,6 +523,10 @@ services:
       - EULA=TRUE
       - SERVER_PORT=$server_port
       - DIFFICULTY=$difficulty
+    volumes:
+      - $server_name:/data
+volumes:
+  $server_name: {}
 EOF
 
     # Add the level seed if provided
@@ -593,7 +597,7 @@ remove_minecraft_pe_server() {
 
             # Remove the server using Docker Compose
             cd "/containers/minecraft/$server"
-            docker-compose down
+            docker-compose down -v
 
             # Remove the Docker Compose configuration
             rm -f "/containers/minecraft/$server/docker-compose.yml"
