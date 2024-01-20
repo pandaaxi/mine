@@ -77,13 +77,14 @@ install_caddy() {
         echo "}"
     } >> /root/containers/caddy/Caddyfile
     echo "Caddyfile updated."
+    docker network create caddy
 
         cat <<EOF > docker-compose.yml
 version: '3.8'
 
 networks:
   caddy:
-
+    external: true
 services:
   caddy:
     image: caddy:latest
@@ -153,7 +154,7 @@ version: '3.8'
 
 networks:
   caddy:
-
+    external: true
 services:
     alist:
         image: 'xhofe/alist:latest'
@@ -510,10 +511,10 @@ install_minecraft_pe_server() {
     fi
 
     # Create a directory for the Minecraft server
-    mkdir -p "/containers/minecraft/$server_name"
+    mkdir -p "/root/containers/minecraft/$server_name"
 
     # Create a Docker Compose configuration for the Minecraft server
-    cat <<EOF > "/containers/minecraft/$server_name/docker-compose.yml"
+    cat <<EOF > "/root/containers/minecraft/$server_name/docker-compose.yml"
 version: '3.8'
 services:
   minecraft-bedrock-server:
@@ -523,19 +524,15 @@ services:
       - EULA=TRUE
       - SERVER_PORT=$server_port
       - DIFFICULTY=$difficulty
-    volumes:
-      - $server_name:/data
-volumes:
-  $server_name: {}
 EOF
 
     # Add the level seed if provided
     if [ -n "$level_seed" ]; then
-        echo "      - LEVEL_SEED=$level_seed" >> "/containers/minecraft/$server_name/docker-compose.yml"
+        echo "      - LEVEL_SEED=$level_seed" >> "/root/containers/minecraft/$server_name/docker-compose.yml"
     fi
 
     # Add the rest of the configuration
-    cat <<EOF >> "/containers/minecraft/$server_name/docker-compose.yml"
+    cat <<EOF >> "/root/containers/minecraft/$server_name/docker-compose.yml"
     ports:
       - "$server_port:$server_port/udp"
     volumes:
@@ -546,7 +543,7 @@ volumes:
 EOF
 
     # Start the Minecraft server
-    cd "/containers/minecraft/$server_name"
+    cd "/root/containers/minecraft/$server_name"
     docker-compose up -d
 
     # Print server information
@@ -596,14 +593,14 @@ remove_minecraft_pe_server() {
             fi
 
             # Remove the server using Docker Compose
-            cd "/containers/minecraft/$server"
+            cd "/root/containers/minecraft/$server"
             docker-compose down -v
 
             # Remove the Docker Compose configuration
-            rm -f "/containers/minecraft/$server/docker-compose.yml"
+            rm -f "/root/containers/minecraft/$server/docker-compose.yml"
 
             # Remove the server folder
-            rm -rf "/containers/minecraft/$server"
+            rm -rf "/root/containers/minecraft/$server"
         done
 
         # Remove all server data volumes
@@ -620,14 +617,14 @@ remove_minecraft_pe_server() {
         fi
 
         # Remove the server using Docker Compose
-        cd "/containers/minecraft/$server_name"
+        cd "/root/containers/minecraft/$server_name"
         docker-compose down
 
         # Remove the Docker Compose configuration
-        rm -f "/containers/minecraft/$server_name/docker-compose.yml"
+        rm -f "/root/containers/minecraft/$server_name/docker-compose.yml"
 
         # Remove the server folder
-        rm -rf "/containers/minecraft/$server_name"
+        rm -rf "/root/containers/minecraft/$server_name"
 
         # Remove the server data volume
         docker volume rm "$server_name"
@@ -671,10 +668,10 @@ edit_minecraft_pe_server() {
     fi
 
     # Get the current server directory
-    server_directory="/containers/minecraft/$server_name"
+    server_directory="/root/containers/minecraft/$server_name"
 
     # Stop the Minecraft server using Docker Compose
-    (cd "$server_directory" && docker-compose down)
+    (cd "$server_directory" && docker compose down)
 
     # Ask for a new server port
     read -p "Enter a new server port (leave blank to keep the current port): " new_server_port
@@ -691,7 +688,7 @@ edit_minecraft_pe_server() {
            "$server_directory/docker-compose.yml"
 
     # Restart the selected Minecraft server using Docker Compose
-    (cd "$server_directory" && docker-compose up -d)
+    (cd "$server_directory" && docker compose up -d)
 
     echo "Minecraft PE Server configuration has been updated."
 }
