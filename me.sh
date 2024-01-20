@@ -1067,7 +1067,7 @@ trace() {
 main_menu() {
     while true; do
         clear
-        echo "Select an option:v1.0"
+        echo "Select an option:v1.1"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
