@@ -237,6 +237,26 @@ EOF
     fi
 }
 
+# Function to update Marzban-Node
+update_marzban_node() {
+    echo "Updating Marzban-Node..."
+        # Assuming /root/containers/Marzban-node exists and contains the previous installation
+        cd /root/containers/Marzban-node
+
+        # Fetch the latest changes from the repository
+        git pull origin master
+
+        # Pull the latest Docker images
+        docker compose pull
+
+        # Restart Docker Compose to apply changes
+        docker compose down
+        docker compose up -d
+
+        echo "Marzban-Node has been updated."
+    fi
+}
+
 
 # Function to install haproxy to marzban
 turn_on_haproxy_marzban() {
@@ -325,7 +345,6 @@ install_marzban_panel() {
         fi
     fi
 
-    allow_port_for_marzban
     apt update && apt upgrade -y && sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
 
     # Replace the database
@@ -397,6 +416,57 @@ install_marzban_panel() {
 
     marzban restart
 }
+
+# Function to update Marzban Panel
+update_marzban_panel() {
+    echo "Updating Marzban Panel..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        echo "Docker is not installed. Please install Docker first."
+        return
+    fi
+
+    # Update the Marzban Panel script and components
+    marzban update
+
+    # Update the database if necessary
+    # For example, backup existing database and update schema if required
+    # This is a placeholder for database update logic
+
+    # Update Xray component
+    if [ "$(arch)" == "aarch64" ]; then
+        apt install unzip -y
+        rm -r /var/lib/marzban/xray-core/
+        mkdir -p /var/lib/marzban/xray-core/
+        cd /var/lib/marzban/xray-core/
+        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip -4
+        unzip Xray-linux-arm64-v8a.zip
+        rm Xray-linux-arm64-v8a.zip
+        cd -
+    elif [ "$(arch)" == "x86_64" ]; then
+        apt install unzip -y
+        rm -r /var/lib/marzban/xray-core/
+        mkdir -p /var/lib/marzban/xray-core/
+        cd /var/lib/marzban/xray-core/
+        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -4
+        unzip Xray-linux-64.zip
+        rm Xray-linux-64.zip
+        cd -
+    fi
+
+    # Check and renew SSL for the domain if necessary
+    # This placeholder assumes you have a function to check and renew SSL certificates
+    # Example: renew_ssl "$domain" "/var/lib/marzban/certs"
+
+    # Optionally, prompt for domain SSL renewal or automate as part of the update process
+
+    # Restart Marzban to apply updates
+    marzban restart
+
+    echo "Marzban Panel has been updated."
+}
+
 
 # Function to uninstall Marzban Panel
 uninstall_marzban_panel() {
@@ -791,13 +861,8 @@ allow_port_for_marzban() {
     ufw allow 62051/tcp
     #Https Port
     ufw allow 443/tcp
-    ufw allow 2087/tcp
-    ufw allow 2096/tcp
-    ufw allow 8443/tcp
     #Http Port
     ufw allow 80/tcp
-    ufw allow 8080/tcp
-    ufw allow 20001,20002,20003,20004/tcp
     sudo ufw reload
     ufw status
     echo "Ports for Marzban have been allowed."
@@ -1246,20 +1311,24 @@ marzban_submenu() {
         clear  
         echo "Marzban Sub-Options:"
         echo "1: Install Marzban Panel"
-        echo "2: Install Marzban Node"
-        echo "3: Display SSL certificate (Node)"
-        echo "4: Uninstall Marzban"
-        echo "5: Turn on Haproxy"
+        echo "2: Update Marzban Panel"
+        echo "3: Install Marzban Node"
+        echo "4: Update Marzban Node"
+        echo "5: Display SSL certificate (Node)"
+        echo "6: Uninstall Marzban"
+        echo "7: Turn on Haproxy"
         echo "0: Back to main menu"
 
         read -p "Enter your choice: " sub_choice
 
         case $sub_choice in
             1) install_marzban_panel ;;
-            2) install_marzban_node ;;
-            3) display_ssl_certificate ;;
-            4) uninstall_marzban_submenu ;;
-            5) turn_on_haproxy_marzban ;;
+            2) update_marzban_panel ;;
+            3) install_marzban_node ;;
+            4) update_marzban_node ;;
+            5) display_ssl_certificate ;;
+            6) uninstall_marzban_submenu ;;
+            7) turn_on_haproxy_marzban ;;
             0) break ;;
             *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
         esac
@@ -1369,5 +1438,5 @@ quit_script() {
 
 
 # Start the main menu
-echo "v1.0.1"
+echo "v1.2.1"
 main_menu
