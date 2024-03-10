@@ -254,7 +254,6 @@ update_marzban_node() {
         docker compose up -d
 
         echo "Marzban-Node has been updated."
-    fi
 }
 
 
