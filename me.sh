@@ -296,10 +296,11 @@ turn_on_haproxy_marzban() {
 
         use_backend panel if { req.ssl_sni -m end '$domain' }
 
-        use_backend reality if { req.ssl_sni -m end www.mysql.com }
-        use_backend reality if { req.ssl_sni -m end www.eepurl.com }
-        use_backend reality if { req.ssl_sni -m end a.teads.tv }
-        use_backend reality if { req.ssl_sni -m end podcasts.apple.com }
+        use_backend reality if { req.ssl_sni -m end .com }
+        use_backend reality if { req.ssl_sni -m end .edu }
+        use_backend reality if { req.ssl_sni -m end .org }
+        use_backend reality if { req.ssl_sni -m end .io }
+        use_backend reality if { req.ssl_sni -m end .se }
 
         use_backend grpc if { req.ssl_sni -m end www.naruto-official.com }
         use_backend grpc if { req.ssl_sni -m end www.eventbrite.com }
@@ -374,6 +375,14 @@ install_marzban_panel() {
         rm Xray-linux-64.zip
         cd
     fi
+    if sudo ufw status | grep -q "80.*ALLOW"; then
+        echo "Port 80 is already allowed."
+    else
+        echo "Allowing port 80 through UFW."
+        sudo ufw allow 80
+        echo "Port 80 has been allowed."
+    fi
+    
     # Run script to register SSL for the domain (if provided)
     read -p "Enter the domain for Marzban SSL registration (leave blank to skip): " domain
     if [ -n "$domain" ]; then
@@ -419,12 +428,6 @@ install_marzban_panel() {
 # Function to update Marzban Panel
 update_marzban_panel() {
     echo "Updating Marzban Panel..."
-
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        echo "Docker is not installed. Please install Docker first."
-        return
-    fi
 
     # Update the Marzban Panel script and components
     marzban update
@@ -1437,5 +1440,5 @@ quit_script() {
 
 
 # Start the main menu
-echo "v1.2.1"
+echo "v1.2.2"
 main_menu
