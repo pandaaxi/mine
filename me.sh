@@ -301,11 +301,7 @@ turn_on_haproxy_marzban() {
         use_backend reality if { req.ssl_sni -m end .org }
         use_backend reality if { req.ssl_sni -m end .io }
         use_backend reality if { req.ssl_sni -m end .se }
-
-        use_backend grpc if { req.ssl_sni -m end www.naruto-official.com }
-        use_backend grpc if { req.ssl_sni -m end www.eventbrite.com }
-        use_backend grpc if { req.ssl_sni -m end www.booking.com }
-        use_backend grpc if { req.ssl_sni -m end www.trustpilot.com }
+        use_backend reality if { req.ssl_sni -m end .tv }
 
         default_backend fallback
 
@@ -316,10 +312,6 @@ turn_on_haproxy_marzban() {
     backend fallback
         mode tcp
         server srv1 127.0.0.1:11000
-
-    backend grpc
-        mode tcp
-        server srv1 127.0.0.1:13000
 
     backend reality
         mode tcp
