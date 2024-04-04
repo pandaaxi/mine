@@ -1126,7 +1126,7 @@ trace() {
 main_menu() {
     while true; do
         clear
-        echo "Select an option:v1.1"
+        echo "Select an option: V: 1.2.2"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -1432,5 +1432,4 @@ quit_script() {
 
 
 # Start the main menu
-echo "v1.2.2"
 main_menu
