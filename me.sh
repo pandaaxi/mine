@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Function script
+
+# Docker Section
 # Function to install Docker
 install_docker() {
     clear
@@ -80,8 +82,6 @@ install_caddy() {
     docker network create caddy
 
         cat <<EOF > docker-compose.yml
-version: '3.8'
-
 networks:
   caddy:
     external: true
@@ -108,6 +108,109 @@ volumes:
 EOF
         echo "Created docker-compose.yml"
         docker compose up -d
+
+}
+
+# Function to install Portainer
+install_portainer() {
+    echo "Installing Portainer."
+
+    mkdir -p /root/containers/portainer
+    cd /root/containers/portainer
+    # Check if the Docker network 'portainer' exists
+    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
+
+    # Create the network if it does not exist
+    if [ -z "$network_exists" ]; then
+        echo "Creating Docker network named 'portainer'."
+        docker network create portainer
+    else
+        echo "Docker network named 'portainer' already exists."
+    fi
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /root/containers/portainer/portainer-data:/data
+    networks:
+      - portainer
+    ports:
+      - 9000:9000
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+}
+
+# Function to update Portainer
+update_portainer() {
+    echo "updating Portainer..."
+
+    cd /root/containers/portainer
+
+    docker compose pull
+
+    docker compose down -v && docker compose up -d
+
+}
+
+# Function to install Portainer Agent
+install_portainer_agent() {
+    echo "Installing Portainer Agent..."
+
+    mkdir -p /root/containers/portainer_agent
+    cd /root/containers/portainer_agent
+    # Check if the Docker network 'portainer' exists
+    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
+
+    # Create the network if it does not exist
+    if [ -z "$network_exists" ]; then
+        echo "Creating Docker network named 'portainer'."
+        docker network create portainer
+    else
+        echo "Docker network named 'portainer' already exists."
+    fi
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  portainer_agent:
+    image: portainer/agent:latest
+    container_name: portainer_agent
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    ports:
+      - "9001:9001"
+    networks:
+      - portainer
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+}
+
+# Function to update Portainer Agent
+update_portainer_agent() {
+    echo "updating Portainer Agent..."
+
+    cd /root/containers/portainer_agent
+
+    docker compose pull
+
+    docker compose down -v && docker compose up -d
 
 }
 
@@ -150,8 +253,6 @@ install_alist() {
     cd /root/containers/alist
 
         cat <<EOF > docker-compose.yml
-version: '3.8'
-
 networks:
   caddy:
     external: true
@@ -177,6 +278,8 @@ EOF
         docker exec -it alist ./alist admin random
 }
 
+
+# Marzban Section
 # Function to install Marzban-Node
 install_marzban_node() {
     echo "Installing Marzban-Node..."
@@ -500,6 +603,8 @@ update_script() {
     fi
 }
 
+
+# SSL
 # Function to register SSL certificates with embedded random string generation
 register_ssl() {
   local domain=$1
@@ -528,11 +633,14 @@ display_ssl_certificate() {
     cat /var/lib/marzban-node/ssl_cert.pem
 }
 
+
 # Function to update repositories
 update_repositories() {
     apt update && apt upgrade -y && apt autoremove && apt autoclean
 }
 
+
+# Minecraft Section
 # Function to install Minecraft PE Server
 install_minecraft_pe_server() {
     
@@ -842,49 +950,29 @@ install_ufw() {
     apt-get install ufw -y
     ufw default deny incoming
     ufw default allow outgoing
-    echo "UFW has been installed and default policies set."
+    ufw allow 22/tcp
+    echo "UFW has been installed, 22/tcp and default policies set."
 }
 
 # Function to allow ports for Marzban
-allow_port_for_marzban() {
+allow_tcp() {
     echo "Allowing ports for Marzban..."
-    ufw enable
-    ufw allow 22/tcp
-    #Marzban Node Port
-    ufw allow 62050/tcp
-    ufw allow 62051/tcp
-    #Https Port
-    ufw allow 443/tcp
-    #Http Port
-    ufw allow 80/tcp
-    sudo ufw reload
-    ufw status
-    echo "Ports for Marzban have been allowed."
-}
+    ufw enable  # Enable UFW if it's not already enabled
 
-# Function to allow ports for Wordpress
-allow_port_for_wordpress() {
-    echo "Allowing ports for Wordpress..."
-    ufw enable
-    ufw allow 22/tcp
-    ufw allow 443/tcp
-    ufw allow 80/tcp
-    sudo ufw reload
-    ufw status
-    echo "Ports for Wordpress have been allowed."
-}
+    # Prompt the user to input ports
+    echo "Please enter the ports you want to allow, separated by spaces:"
+    read -r -a ports_to_allow
 
-# Function to allow ports for OpenVPN
-allow_port_for_openvpn() {
-    echo "Allowing ports for OpenVPN..."
-    ufw enable
-    ufw allow 22/tcp
-    ufw allow 443/tcp
-    ufw allow 943/tcp
-    ufw allow 1194/udp
+    # Iterate over each port and allow it
+    for port in "${ports_to_allow[@]}"; do
+        ufw allow "$port"/tcp
+    done
+
+    # Reload UFW to apply changes
     sudo ufw reload
-    ufw status
-    echo "Ports for OpenVPN have been allowed."
+    # Display the status of UFW to check if the ports are allowed
+    ufw status verbose
+    echo "Ports have been allowed."
 }
 
 # Function to reset UFW to default settings
@@ -1126,7 +1214,7 @@ trace() {
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 1.2.2"
+        echo "Select an option: V: 1.3"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -1210,9 +1298,16 @@ docker_submenu() {
         clear
         echo "Docker Sub-Options:"
         echo "1: Install Docker"
-        echo "2: Uninstall Docker"
-        echo "3: Install Caddy"
+        echo "2: Install Portainer"
+        echo "3: Install Portainer Agent"
         echo "4: Install Alist"
+        echo "5: Install Caddy"
+
+        echo "6: Update Portainer"
+        echo "7: Update Portainer Agent"
+
+        echo "8: Uninstall Docker"
+
         echo "0: Back to main menu"
 
         docker ps -a
@@ -1221,9 +1316,16 @@ docker_submenu() {
 
         case "$docker_choice" in
             1) install_docker ;;
-            2) uninstall_docker ;;
-            3) install_caddy ;;
+            2) install_portainer ;;
+            3) install_portainer_agent ;;
             4) install_alist ;;
+            5) install_caddy ;;
+
+            6) update_portainer ;;
+            7) update_portainer_agent ;;
+
+            8) uninstall_docker ;;
+            
             0) break ;;
             *)
                 echo "Invalid option. Please choose a valid option."
