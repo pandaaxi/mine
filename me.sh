@@ -200,6 +200,8 @@ EOF
         echo "Created docker-compose.yml"
         docker compose up -d
 
+        curl ip.sb -4
+
 }
 
 # Function to update Portainer Agent
@@ -399,13 +401,6 @@ turn_on_haproxy_marzban() {
 
         use_backend panel if { req.ssl_sni -m end '$domain' }
 
-        use_backend reality if { req.ssl_sni -m end .com }
-        use_backend reality if { req.ssl_sni -m end .edu }
-        use_backend reality if { req.ssl_sni -m end .org }
-        use_backend reality if { req.ssl_sni -m end .io }
-        use_backend reality if { req.ssl_sni -m end .se }
-        use_backend reality if { req.ssl_sni -m end .tv }
-
         default_backend fallback
 
     backend panel
@@ -415,10 +410,6 @@ turn_on_haproxy_marzban() {
     backend fallback
         mode tcp
         server srv1 127.0.0.1:11000
-
-    backend reality
-        mode tcp
-        server srv1 127.0.0.1:12000 send-proxy
     ' >> /etc/haproxy/haproxy.cfg
 
     # Restart HAProxy service
@@ -478,11 +469,17 @@ install_marzban_panel() {
         echo "Port 80 has been allowed."
     fi
     
+    sudo wget -N -P /var/lib/marzban/templates/subscription/  https://raw.githubusercontent.com/vblyrpv074/marzban-sub-clone/main/index.html
+
+    rm /opt/marzban/.env
+
     # Run script to register SSL for the domain (if provided)
     read -p "Enter the domain for Marzban SSL registration (leave blank to skip): " domain
     if [ -n "$domain" ]; then
         # Register SSL for the domain
         mkdir -p /var/lib/marzban/certs
+
+        touch /opt/marzban/.env
         
         register_ssl "$domain" "/var/lib/marzban/certs"
 
@@ -501,6 +498,9 @@ install_marzban_panel() {
         XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
 
         SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
+
+        CUSTOM_TEMPLATES_DIRECTORY="/var/lib/marzban/templates/"
+        SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
         ' >> /opt/marzban/.env
     else
         # Configure Marzban environment file without SSL details
@@ -514,6 +514,9 @@ install_marzban_panel() {
         XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
 
         SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
+
+        CUSTOM_TEMPLATES_DIRECTORY="/var/lib/marzban/templates/"
+        SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
         ' > /opt/marzban/.env
     fi
 
@@ -574,7 +577,7 @@ uninstall_marzban_panel() {
 # Function to uninstall Marzban Node
 uninstall_marzban_node() {
     echo "Uninstalling Marzban Node..."
-    cd && cd Marzban-node && docker compose down -v && cd && rm -rf Marzban-node && rm -r /var/lib/marzban-node
+    cd && cd /root/containers/Marzban-node && docker compose down -v && cd && rm -rf /root/containers/Marzban-node && rm -r /var/lib/marzban-node
 }
 
 # Function to uninstall all Marzban components
@@ -585,7 +588,7 @@ uninstall_all_marzban() {
     cd && marzban uninstall
     
     # Uninstall Marzban Node
-    cd && cd Marzban-node && docker compose down -v && cd && rm -rf Marzban-node && rm -r /var/lib/marzban-node
+    cd && cd /root/containers/Marzban-node && docker compose down -v && cd && rm -rf /root/containers/Marzban-node && rm -r /var/lib/marzban-node
 }
 
 # Function to update the script from the provided link
@@ -1214,7 +1217,7 @@ trace() {
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 1.3"
+        echo "Select an option: V: 1.4"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
