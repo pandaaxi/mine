@@ -1,0 +1,11 @@
+services:
+  telegram-sender:
+    build: .
+    container_name: tgbackup
+    environment:
+      - TELEGRAM_BOT_TOKEN=$bot_token
+      - TELEGRAM_CHAT_ID=$bot_chatid
+    volumes:
+      - /root/containers/tgbackup/data:/app/data
+      - /root/containers/tgbackup/tgbackup.py:/app/tgbackup.py
+    restart: unless-stopped
