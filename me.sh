@@ -124,7 +124,7 @@ docker_submenu() {
             6) install_cloudflared ;;
             7) install_ovpn_admin ;;
             8) install_uptimekuma ;;
-            9) telegram_backup
+            9) telegram_backup ;;
 
             12) update_portainer ;;
             13) update_portainer_agent ;;
