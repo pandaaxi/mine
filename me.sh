@@ -1,4 +1,4 @@
-5#!/bin/bash
+#!/bin/bash
 
 # Function script
 
@@ -6,7 +6,7 @@
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 2"
+        echo "Select an option: V: 2.1"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -656,10 +656,10 @@ services:
     networks:
       - portainer
 EOF
-        echo "Created docker-compose.yml"
-        docker compose up -d
+    echo "Created docker-compose.yml"
+    docker compose up -d
 
-        curl ip.sb -4
+    curl ip.sb -4
 
 }
 
@@ -837,6 +837,8 @@ EOF
 
     (crontab -l 2>/dev/null; echo "$cron_interval $cron_command") | crontab -
     echo "Crontab added: $cron_interval $cron_command"
+
+    $cron_command
 
     echo "Created docker-compose.yml"
     docker compose up -d
