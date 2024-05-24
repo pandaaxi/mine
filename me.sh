@@ -1,4 +1,4 @@
-#!/bin/bash
+5#!/bin/bash
 
 # Function script
 
@@ -6,7 +6,7 @@
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 1.4"
+        echo "Select an option: V: 2"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
