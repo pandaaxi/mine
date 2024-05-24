@@ -6,7 +6,7 @@
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 2.1"
+        echo "Select an option: V: 2.2"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -630,31 +630,31 @@ services:
            - /var/run/docker.sock:/var/run/docker.sock:ro
        networks:
            - portainer
-  openvpn-as:
-    image: d3vilh/openvpn-server:latest
-    privileged: true
-    container_name: openvpn-as-ui
-    restart: unless-stopped
-    environment:
-        TRUST_SUB: 10.0.70.0/24
-        GUEST_SUB: 10.0.71.0/24
-        HOME_SUB: 192.168.88.0/24
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - 1194:1194/udp
-      - 127.0.0.1:2080:2080
-    volumes:
-      - /root/containers/ovpnadmin/:/etc/openvpn
-      - /root/containers/ovpnadmin/pki:/etc/openvpn/pki
-      - /root/containers/ovpnadmin/clients:/etc/openvpn/clients
-      - /root/containers/ovpnadmin/config:/etc/openvpn/config
-      - /root/containers/ovpnadmin/staticclients:/etc/openvpn/staticclients
-      - /root/containers/ovpnadmin/log:/var/log/openvpn
-      - /root/containers/ovpnadmin/fw-rules.sh:/opt/app/fw-rules.sh
-      - /root/containers/ovpnadmin/server.conf:/etc/openvpn/server.conf
-    networks:
-      - portainer
+    openvpn-as:
+        image: d3vilh/openvpn-server:latest
+        privileged: true
+        container_name: openvpn-as-ui
+        restart: unless-stopped
+        environment:
+          TRUST_SUB: 10.0.70.0/24
+          GUEST_SUB: 10.0.71.0/24
+          HOME_SUB: 192.168.88.0/24
+        cap_add:
+          - NET_ADMIN
+        ports:
+          - 1194:1194/udp
+          - 127.0.0.1:2080:2080
+        volumes:
+          - /root/containers/ovpnadmin/:/etc/openvpn
+          - /root/containers/ovpnadmin/pki:/etc/openvpn/pki
+          - /root/containers/ovpnadmin/clients:/etc/openvpn/clients
+          - /root/containers/ovpnadmin/config:/etc/openvpn/config
+          - /root/containers/ovpnadmin/staticclients:/etc/openvpn/staticclients
+          - /root/containers/ovpnadmin/log:/var/log/openvpn
+          - /root/containers/ovpnadmin/fw-rules.sh:/opt/app/fw-rules.sh
+          - /root/containers/ovpnadmin/server.conf:/etc/openvpn/server.conf
+        networks:
+          - portainer
 EOF
     echo "Created docker-compose.yml"
     docker compose up -d
