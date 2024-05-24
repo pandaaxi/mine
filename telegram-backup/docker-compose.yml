@@ -1,11 +1,16 @@
+networks:
+  portainer:
+    external: true
 services:
-  telegram-sender:
-    build: .
-    container_name: tgbackup
-    environment:
-      - TELEGRAM_BOT_TOKEN=$bot_token
-      - TELEGRAM_CHAT_ID=$bot_chatid
-    volumes:
-      - /root/containers/tgbackup/data:/app/data
-      - /root/containers/tgbackup/tgbackup.py:/app/tgbackup.py
-    restart: unless-stopped
+    alist:
+        image: 'jianhua123/telegram-backup:latest'
+        container_name: tgbackup
+        restart: unless-stopped
+        volumes:
+            - /root/containers/tgbackup/data:/app/data
+        environment:
+            - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+            - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+            - BACKUP_DELAY=${BACKUP_DELAY}
+        networks:
+            - portainer
