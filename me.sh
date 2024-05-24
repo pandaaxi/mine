@@ -2,6 +2,345 @@
 
 # Function script
 
+# Main menu
+main_menu() {
+    while true; do
+        clear
+        echo "Select an option: V: 1.4"
+        echo "1: Docker"
+        echo "2: Marzban"
+        echo "3: SSL Cert Management"
+        echo "4: Update Repositories"
+        echo "5: Minecraft PE Server"
+        echo "6: Fail2Ban for SSHD"
+        echo "7: Fail2Ban status"
+        echo "8: Config UFW"
+        echo "9: OpenVPN AS"
+        echo "10: wgcf"
+        echo "0: Quit"
+        echo "00: Update"
+
+        read -p "Enter your choice: " choice
+
+        case $choice in
+            1) docker_submenu ;;
+            2) marzban_submenu ;;
+            3) ssl_cert_management ;;
+            4) update_repositories ;;
+            5) minecraft_pe_server_submenu ;;
+            6) fail2bansshd ;;
+            7) fail2banstatus ;;
+            8) configure_ufw_security ;;
+            9) openvpn_as_submenu ;;
+            10) wgcf ;;
+            0) quit_script ;;
+            00) update_script ;;
+            *) echo "Invalid option. Please choose a valid option." ;;
+        esac
+
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
+}
+
+
+# Sub Menu
+# SUb menu for SSL certificate management (Menu)
+ssl_cert_management() {
+  local choice
+
+  # Consume any remaining input in the buffer
+  read -r -t 0.1 -n 10000
+
+  # Main menu
+  echo "SSL Certificate Management Menu"
+  echo "1: Register SSL for marzban (using /var/lib/marzban/certs)"
+  echo "2: Register SSL for x-ui (using /root/certs)"
+  echo "3: Show SSL Certificate Summary"
+  read -p "Select an option (1-3): " choice
+
+  case $choice in
+    1)
+      read -p "Enter the domain for Marzban SSL registration: " domain
+      mkdir -p /var/lib/marzban/certs
+      register_ssl "$domain" "/var/lib/marzban/certs"
+      ;;
+    2)
+      read -p "Enter the domain for x-ui SSL registration: " domain
+      mkdir -p /root/certs
+      register_ssl "$domain" "/root/certs"
+      ;;
+    3)
+      echo "SSL Certificates Summary:"
+      echo "Marzban: $(ls /var/lib/marzban/certs/ | grep -c '.cert.crt') certificates registered"
+      echo "x-ui: $(ls /root/certs/ | grep -c '.cert.crt') certificates registered"
+      ;;
+    *)
+      echo "Invalid choice. Please select a valid option."
+      ;;
+  esac
+}
+
+# Sub-menu for Docker options
+docker_submenu() {
+    while true; do
+        clear
+        echo "Docker Sub-Options:"
+        echo "1: Install Docker"
+        echo "2: Install Portainer"
+        echo "3: Install Portainer Agent"
+        echo "4: Install Alist"
+        echo "5: Install Caddy"
+        echo "6: Install Cloudflared"
+        echo "7: Install OVPN admin ui"
+        echo "8: Install Uptime KUMA"
+        echo "9: Install Telegram Backup"
+
+        echo "12: Update Portainer"
+        echo "13: Update Portainer Agent"
+        echo "14: Update Alist"
+        echo "15: Update Caddy"
+        echo "16: Update Cloudflared"
+        echo "17: Uinstall OVPN admin ui"
+        echo "18: Uinstall Uptime KUMA"
+
+        echo "01: Uninstall Docker"
+
+        echo "0: Back to main menu"
+
+        docker ps -a
+
+        read -p "Enter your choice: " docker_choice
+
+        case "$docker_choice" in
+            1) install_docker ;;
+            2) install_portainer ;;
+            3) install_portainer_agent ;;
+            4) install_alist ;;
+            5) install_caddy ;;
+            6) install_cloudflared ;;
+            7) install_ovpn_admin ;;
+            8) install_uptimekuma ;;
+            9) telegram_backup
+
+            12) update_portainer ;;
+            13) update_portainer_agent ;;
+            14) update_alist ;;
+            15) update_caddy ;;
+            16) update_cloudflared ;;
+            17) update_ovpn_admin ;;
+            18) update_uptimekuma ;;
+
+            01) uninstall_docker ;;
+            
+            0) break ;;
+            *)
+                echo "Invalid option. Please choose a valid option."
+                ;;
+        esac
+    done
+}
+
+# Sub-menu for wgcf
+wgcf() {
+    while true; do
+        echo "Choose an option:"
+        echo "1. Generate configuration"
+        echo "2. Check status"
+        echo "3. Trace"
+        echo "0. Back to main menu"
+
+        read -p "Enter your choice: " choice
+
+        case $choice in
+            1)
+                generate
+                ;;
+            2)
+                check_status
+                ;;
+            3)
+                trace
+                ;;
+            0)
+                break
+                ;;
+            *)
+                echo "Invalid choice. Please enter a valid option."
+                ;;
+        esac
+    done
+}
+
+# Sub-menu configure UFW (Uncomplicated Firewall) security
+configure_ufw_security() {
+    echo "Configuring UFW (Uncomplicated Firewall) security..."
+
+    # Check if UFW is installed
+    if ! command -v ufw &> /dev/null; then
+        read -p "UFW is not available! Do you want to install? (y/n) " ufw_choice
+        if [ "$ufw_choice" == "y" ]; then
+            install_ufw
+        else
+            echo "UFW is not installed. Please install UFW first."
+            return
+        fi
+    fi
+
+    while true; do
+        echo "UFW Security Sub-Options:"
+        echo "1: Allow port for Marzban"
+        echo "2: Allow port for Wordpress"
+        echo "3: Allow port for OpenVPN"
+        echo "0: Back to main menu"
+        echo "00: Reset UFW"
+
+        read -p "Enter your choice: " sub_choice
+
+        case $sub_choice in
+            1) allow_port_for_marzban ;;
+            2) allow_port_for_wordpress ;;
+            3) allow_port_for_openvpn ;;
+            0) break ;;
+            00) reset_ufw ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+    done
+}
+
+# Sub-menu for Marzban options
+marzban_submenu() {
+    while true; do
+        clear  
+        echo "Marzban Sub-Options:"
+        echo "1: Install Marzban Panel"
+        echo "2: Update Marzban Panel"
+        echo "3: Install Marzban Node"
+        echo "4: Update Marzban Node"
+        echo "5: Display SSL certificate (Node)"
+        echo "6: Uninstall Marzban"
+        echo "0: Back to main menu"
+
+        read -p "Enter your choice: " sub_choice
+
+        case $sub_choice in
+            1) install_marzban_panel ;;
+            2) update_marzban_panel ;;
+            3) install_marzban_node ;;
+            4) update_marzban_node ;;
+            5) display_ssl_certificate ;;
+            6) uninstall_marzban_submenu ;;
+            0) break ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
+}
+
+# Sub-menu for Marzban uninstall options
+uninstall_marzban_submenu() {
+    while true; do
+        clear  
+        echo "Uninstall Marzban Sub-Options:"
+        echo "1: Uninstall Marzban Panel"
+        echo "2: Uninstall Marzban Node"
+        echo "3: Uninstall all Marzban components"
+        echo "0: Back to Marzban menu"
+        echo "00: Back to main menu"
+
+        read -p "Enter your choice: " uninstall_choice
+
+        case $uninstall_choice in
+            1) uninstall_marzban_panel ;;
+            2) uninstall_marzban_node ;;
+            3) uninstall_all_marzban ;;
+            0) break ;;
+            00) break 2 ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
+}
+
+# Sub-menu for Minecraft PE Server
+minecraft_pe_server_submenu() {
+    while true; do
+        clear  
+        echo "Minecraft PE Server Sub-Options:"
+        echo "1: Install Minecraft Server"
+        echo "2: Edit Port and Difficulty"
+        echo "3: Enable Coordinates"
+        echo "4: Remove Minecraft Server"
+        echo "0: Back to main menu"
+
+        read -p "Enter your choice: " sub_choice
+
+        case $sub_choice in
+            1) install_minecraft_pe_server ;;
+            2) edit_minecraft_pe_server ;;
+            3) enable_coordinates ;;
+            4) remove_minecraft_pe_server ;;
+            0) break ;;
+            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
+        esac
+        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            echo "Exiting..."
+            exit 0
+        fi
+    done
+}
+
+# Function to manage OpenVPN AS
+openvpn_as_submenu() {
+    while true; do
+        clear
+        echo "OpenVPN AS Menu:"
+        echo "1: Install OpenVPN AS"
+        echo "2: Uninstall OpenVPN AS"
+        echo "3: Backup OpenVPN AS"
+        echo "4: Restore OpenVPN AS"
+        echo "0: Back"
+
+        read -p "Enter your choice: " choice
+
+        case $choice in
+            1) install_openvpn_as ;;
+            2) remove_openvpn_as ;;
+            3) backup_openvpn_as ;;
+            4) restore_openvpn_as_backup ;;
+            0) break ;;
+            *) echo "Invalid option. Please choose a valid option." ;;
+        esac
+
+        read -p "Press any key to return to the OpenVPN AS menu or 'q' to go back to the main menu." -n 1 -s input
+        if [ "$input" == "q" ]; then
+            break
+        fi
+    done
+}
+
+
+# Function to quit the script
+quit_script() {
+    echo "Exiting..."
+    exit 0
+}
+
+
 # Docker Section
 # Function to install Docker
 install_docker() {
@@ -51,6 +390,456 @@ uninstall_docker() {
             echo "Invalid answer, please input N or Y。"
             ;;
     esac
+}
+
+install_cloudflared() {
+    echo "Installing Cloudflared."
+
+    mkdir -p /root/containers/cloudflared
+    cd /root/containers/cloudflared
+    # Check if the Docker network 'portainer' exists
+    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
+
+    # Create the network if it does not exist
+    if [ -z "$network_exists" ]; then
+        echo "Creating Docker network named 'portainer'."
+        docker network create portainer
+    else
+        echo "Docker network named 'portainer' already exists."
+    fi
+
+    read -p "Enter the cloudflared Token: " token
+
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  cloudflared:
+    restart: unless-stopped
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    networks:
+      - portainer
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token
+      - $token
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+}
+
+update_cloudflared() {
+    echo "update Cloudflared ..."
+
+    cloudflared_running=$(docker ps --filter "name=cloudflared" --format "{{.Names}}")
+    # Run install_cloudflared if the Cloudflared container is not running
+    if [ -z "$cloudflared_running" ]; then
+        echo "Cloudflared is not installed."
+        quit_script
+    else
+        echo "Cloudflared is installed. Updateing ..."
+    fi
+
+    cd /root/containers/cloudflared
+
+        docker compose down
+        docker compose pull
+        docker compose up -d
+
+}
+
+uninstall_cloudflared() {
+    echo "uninstalling Cloudflared ..."
+
+    cloudflared_running=$(docker ps --filter "name=cloudflared" --format "{{.Names}}")
+    # Run install_cloudflared if the Cloudflared container is not running
+    if [ -z "$cloudflared_running" ]; then
+        echo "Cloudflared is not installed."
+        quit_script
+    else
+        echo "Cloudflared is installed. Uninstalling ..."
+    fi
+
+    cd /root/containers/cloudflared
+
+        docker compose down -v
+
+}
+
+# Function to install Portainer
+install_portainer() {
+    echo "Installing Portainer."
+
+    # Check if the Cloudflared container is running
+    cloudflared_running=$(docker ps --filter "name=cloudflared" --format "{{.Names}}")
+
+    # Run install_cloudflared if the Cloudflared container is not running
+    if [ -z "$cloudflared_running" ]; then
+        echo "Cloudflared is not installed. Installing Cloudflared first."
+        install_cloudflared
+    else
+        echo "Cloudflared is already installed."
+    fi
+
+    mkdir -p /root/containers/portainer
+    cd /root/containers/portainer
+    # Check if the Docker network 'portainer' exists
+    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
+
+    # Create the network if it does not exist
+    if [ -z "$network_exists" ]; then
+        echo "Creating Docker network named 'portainer'."
+        docker network create portainer
+    else
+        echo "Docker network named 'portainer' already exists."
+    fi
+
+    cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /root/containers/portainer/portainer-data:/data
+    networks:
+      - portainer
+    ports:
+      - 127.0.0.1:9000:9000
+EOF
+    echo "Created docker-compose.yml"
+    docker compose up -d
+}
+
+
+# Function to update Portainer
+update_portainer() {
+    echo "updating Portainer..."
+
+    cd /root/containers/portainer
+
+    docker compose pull
+
+    docker compose down -v && docker compose up -d
+
+}
+
+# Function to install Portainer Agent
+install_portainer_agent() {
+    echo "Installing Portainer Agent..."
+
+    mkdir -p /root/containers/portainer_agent
+    cd /root/containers/portainer_agent
+    # Check if the Docker network 'portainer' exists
+    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
+
+    # Create the network if it does not exist
+    if [ -z "$network_exists" ]; then
+        echo "Creating Docker network named 'portainer'."
+        docker network create portainer
+    else
+        echo "Docker network named 'portainer' already exists."
+    fi
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  portainer_agent:
+    image: portainer/agent:latest
+    container_name: portainer_agent
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    ports:
+      - 9001:9001
+    networks:
+      - portainer
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+        curl ip.sb -4
+
+}
+
+# Function to update Portainer Agent
+update_portainer_agent() {
+    echo "updating Portainer Agent..."
+
+    cd /root/containers/portainer_agent
+
+    docker compose pull
+
+    docker compose down -v && docker compose up -d
+
+}
+
+# Function to install Portainer Agent
+install_ovpn_admin() {
+    echo "Installing OpenVPN Admin GUI..."
+
+    mkdir -p /root/containers/ovpnadmin
+    cd /root/containers/ovpnadmin
+    # Check if the Docker network 'portainer' exists
+    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
+
+    # Create the network if it does not exist
+    if [ -z "$network_exists" ]; then
+        echo "Creating Docker network named 'portainer'."
+        docker network create portainer
+    else
+        echo "Docker network named 'portainer' already exists."
+    fi
+    touch /root/containers/ovpnadmin/server.conf
+    touch /root/containers/ovpnadmin/fw-rules.sh
+    touch /root/containers/ovpnadmin/client.conf
+
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+    openvpn-ui:
+       container_name: openvpn-ui
+       image: d3vilh/openvpn-ui:latest
+       restart: unless-stopped
+       environment:
+           - OPENVPN_ADMIN_USERNAME=95a4c264-75c6-40d2-9aca-a738f765dd83
+           - OPENVPN_ADMIN_PASSWORD=8e5a9b2a-e5c7-4db0-96b3-31a0290b2bd6
+       privileged: true
+       ports:
+           - 127.0.0.1:8080:8080
+       volumes:
+           - /root/containers/ovpnadmin:/etc/openvpn
+           - /root/containers/ovpnadmin/db:/opt/openvpn-ui/db
+           - /root/containers/ovpnadmin/pki:/usr/share/easy-rsa/pki
+           - /var/run/docker.sock:/var/run/docker.sock:ro
+       networks:
+           - portainer
+  openvpn-as:
+    image: d3vilh/openvpn-server:latest
+    privileged: true
+    container_name: openvpn-as-ui
+    restart: unless-stopped
+    environment:
+        TRUST_SUB: 10.0.70.0/24
+        GUEST_SUB: 10.0.71.0/24
+        HOME_SUB: 192.168.88.0/24
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 1194:1194/udp
+      - 127.0.0.1:2080:2080
+    volumes:
+      - /root/containers/ovpnadmin/:/etc/openvpn
+      - /root/containers/ovpnadmin/pki:/etc/openvpn/pki
+      - /root/containers/ovpnadmin/clients:/etc/openvpn/clients
+      - /root/containers/ovpnadmin/config:/etc/openvpn/config
+      - /root/containers/ovpnadmin/staticclients:/etc/openvpn/staticclients
+      - /root/containers/ovpnadmin/log:/var/log/openvpn
+      - /root/containers/ovpnadmin/fw-rules.sh:/opt/app/fw-rules.sh
+      - /root/containers/ovpnadmin/server.conf:/etc/openvpn/server.conf
+    networks:
+      - portainer
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+        curl ip.sb -4
+
+}
+
+update_ovpn_admin() {
+    cd /root/containers/opvpnadmin/ && docker compose down && docker compose pull && docker compose up -d
+}
+
+# Function to install Portainer
+install_uptimekuma() {
+    echo "Installing uptime-kuma."
+
+    # Check if the Cloudflared container is running
+    cloudflared_running=$(docker ps --filter "name=cloudflared" --format "{{.Names}}")
+
+    # Run install_cloudflared if the Cloudflared container is not running
+    if [ -z "$cloudflared_running" ]; then
+        echo "Cloudflared is not installed. Installing Cloudflared first."
+        install_cloudflared
+    else
+        echo "Cloudflared is already installed."
+    fi
+
+    mkdir -p /root/containers/uptimekuma
+    cd /root/containers/uptimekuma
+    # Check if the Docker network 'portainer' exists
+    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
+
+    # Create the network if it does not exist
+    if [ -z "$network_exists" ]; then
+        echo "Creating Docker network named 'portainer'."
+        docker network create portainer
+    else
+        echo "Docker network named 'portainer' already exists."
+    fi
+
+    cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:3001:3001
+    volumes:
+      - /root/containers/uptimekuma/data:/app/data
+    networks:
+      - portainer
+EOF
+    echo "Created docker-compose.yml"
+    docker compose up -d
+}
+
+update_uptimekuma() {
+    cd /root/containers/uptimekuma/ && docker compose down && docker compose pull && docker compose up -d
+}
+
+# Function to install alist
+install_alist() {
+    echo "Installing alist..."
+
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
+        if [ "$docker_choice" == "y" ]; then
+            install_docker
+        else
+            echo "Docker is not installed. Please install Docker first."
+            return
+        fi
+    fi
+
+    # Check if the Cloudflared container is running
+    cloudflared_running=$(docker ps --filter "name=cloudflared" --format "{{.Names}}")
+
+    # Run install_cloudflared if the Cloudflared container is not running
+    if [ -z "$cloudflared_running" ]; then
+        echo "Cloudflared is not installed. Installing Cloudflared first."
+        install_cloudflared
+    else
+        echo "Cloudflared is already installed."
+    fi
+    
+    #continue install alist
+    mkdir -p /root/containers/alist
+    cd /root/containers/alist
+
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+    alist:
+        image: 'xhofe/alist:latest'
+        container_name: alist
+        restart: unless-stopped
+        volumes:
+            - /root/containers/alist/data:/opt/alist/data
+        ports:
+            - 127.0.0.1:5244:5244
+        environment:
+            - PUID=0
+            - PGID=0
+            - UMASK=022
+        networks:
+            - portainer
+EOF
+        echo "Created docker-compose.yml"
+        docker compose up -d
+
+        docker exec -it alist ./alist admin random
+}
+
+update_alist() {
+    cd /root/containers/alist/ && docker compose down && docker compose pull && docker compose up -d
+}
+
+telegram_backup() {
+    mkdir -p /root/containers/tgbackup
+    mkdir -p /root/containers/tgbackup/data
+    cd /root/containers/tgbackup
+
+
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+    alist:
+        image: 'jianhua123/telegram-backup:latest'
+        container_name: tgbackup
+        restart: unless-stopped
+        volumes:
+            - /root/containers/tgbackup/data:/app/data
+        environment:
+            - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+            - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+            - BACKUP_DELAY=${BACKUP_DELAY}
+        networks:
+            - portainer
+EOF
+    read -p "Enter the telegram bot token: " tgtoken
+    read -p "Enter the telegram chat ID: " chatID
+
+
+        cat <<EOF > .env
+TELEGRAM_BOT_TOKEN=$tgtoken
+TELEGRAM_CHAT_ID=$chatID
+BACKUP_DELAY=86400
+EOF
+    # Get VPS IP
+    ip=$(curl -s ip.sb -4)
+
+    # Always add a crontab
+    read -p "Enter the interval for the crontab (e.g., '0 0 * * *' for daily at midnight): " cron_interval
+
+    echo "What do you want to backup:"
+    echo "1: Marzban"
+    echo "2: OVPN admin ui"
+    echo "0: Manual"
+    read -p "Enter your choice: " backup_choice
+
+    if [ "$backup_choice" = "1" ]; then
+        cron_command="zip -r \"/root/containers/tgbackup/data/marzban-${ip}.zip\" \"/root/containers/marzban\""
+    elif [ "$backup_choice" = "2" ]; then
+        cron_command="zip -r \"/root/containers/tgbackup/data/OVPN-admin-${ip}.zip\" \"/root/containers/ovpnadmin\""
+    elif [ "$backup_choice" = "0" ]; then
+        read -p "Enter the command for the crontab: " cron_command
+    else
+        echo "Invalid choice. Exiting."
+        exit 1
+    fi
+
+    (crontab -l 2>/dev/null; echo "$cron_interval $cron_command") | crontab -
+    echo "Crontab added: $cron_interval $cron_command"
+
+    echo "Created docker-compose.yml"
+    docker compose up -d
 }
 
 # Function to install Caddy
@@ -111,311 +900,7 @@ EOF
 
 }
 
-# Function to install Portainer
-install_portainer() {
-    echo "Installing Portainer."
-
-    mkdir -p /root/containers/portainer
-    cd /root/containers/portainer
-    # Check if the Docker network 'portainer' exists
-    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
-
-    # Create the network if it does not exist
-    if [ -z "$network_exists" ]; then
-        echo "Creating Docker network named 'portainer'."
-        docker network create portainer
-    else
-        echo "Docker network named 'portainer' already exists."
-    fi
-        cat <<EOF > docker-compose.yml
-networks:
-  portainer:
-    external: true
-services:
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /root/containers/portainer/portainer-data:/data
-    networks:
-      - portainer
-    ports:
-      - 9000:9000
-EOF
-        echo "Created docker-compose.yml"
-        docker compose up -d
-
-}
-
-# Function to update Portainer
-update_portainer() {
-    echo "updating Portainer..."
-
-    cd /root/containers/portainer
-
-    docker compose pull
-
-    docker compose down -v && docker compose up -d
-
-}
-
-# Function to install Portainer Agent
-install_portainer_agent() {
-    echo "Installing Portainer Agent..."
-
-    mkdir -p /root/containers/portainer_agent
-    cd /root/containers/portainer_agent
-    # Check if the Docker network 'portainer' exists
-    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
-
-    # Create the network if it does not exist
-    if [ -z "$network_exists" ]; then
-        echo "Creating Docker network named 'portainer'."
-        docker network create portainer
-    else
-        echo "Docker network named 'portainer' already exists."
-    fi
-        cat <<EOF > docker-compose.yml
-networks:
-  portainer:
-    external: true
-services:
-  portainer_agent:
-    image: portainer/agent:latest
-    container_name: portainer_agent
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/volumes:/var/lib/docker/volumes
-    ports:
-      - "9001:9001"
-    networks:
-      - portainer
-EOF
-        echo "Created docker-compose.yml"
-        docker compose up -d
-
-        curl ip.sb -4
-
-}
-
-# Function to update Portainer Agent
-update_portainer_agent() {
-    echo "updating Portainer Agent..."
-
-    cd /root/containers/portainer_agent
-
-    docker compose pull
-
-    docker compose down -v && docker compose up -d
-
-}
-
-# Function to install alist
-install_alist() {
-    echo "Installing alist..."
-
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
-        if [ "$docker_choice" == "y" ]; then
-            install_docker
-        else
-            echo "Docker is not installed. Please install Docker first."
-            return
-        fi
-    fi
-
-    # Check if the Caddy container is running
-    if [ -z "$(docker ps -q -f name=caddy)" ]; then
-        echo "Caddy container is not running."
-        read -p "Do you want to install and run Caddy? (y/n) " caddy_choice
-        if [ "$caddy_choice" == "y" ]; then
-            install_caddy
-        fi
-    fi
-
-    # Ask for the alist domain and update Caddyfile
-    read -p "Enter the domain for alist: " alist_domain
-    echo "Updating Caddyfile for $alist_domain..."
-    {
-        echo "$alist_domain {"
-        echo "  reverse_proxy alist:5244"
-        echo "}"
-    } >> /root/containers/caddy/Caddyfile
-    echo "Caddyfile updated."
-    
-    #continue install alist
-    mkdir -p /root/containers/alist
-    cd /root/containers/alist
-
-        cat <<EOF > docker-compose.yml
-networks:
-  caddy:
-    external: true
-services:
-    alist:
-        image: 'xhofe/alist:latest'
-        container_name: alist
-        restart: unless-stopped
-        volumes:
-            - /etc/alist:/opt/alist/data
-        ports:
-            - 5244:5244
-        environment:
-            - PUID=0
-            - PGID=0
-            - UMASK=022
-        networks:
-            - caddy
-EOF
-        echo "Created docker-compose.yml"
-        docker compose up -d
-
-        docker exec -it alist ./alist admin random
-}
-
-
 # Marzban Section
-# Function to install Marzban-Node
-install_marzban_node() {
-    echo "Installing Marzban-Node..."
-    if ! command -v docker &> /dev/null; then
-        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
-        if [ "$docker_choice" == "y" ]; then
-            install_docker
-        else
-            echo "Docker is not installed. Please install Docker first."
-        fi
-    else
-
-        #update package list
-        cd /root/containers/
-        apt-get update
-
-        # Clone the Marzban-Node repository
-        git clone https://github.com/Gozargah/Marzban-node
-        cd /root/containers/Marzban-node
-
-        # Remove existing docker-compose.yml
-        rm "docker-compose.yml"
-
-        # Create a new docker-compose.yml
-        cat <<EOF > docker-compose.yml
-services:
-  marzban-node:
-    image: gozargah/marzban-node:latest
-    restart: always
-    network_mode: host
-
-    environment:
-      SSL_CLIENT_CERT_FILE: "/var/lib/marzban-node/ssl_client_cert.pem"
-
-    volumes:
-      - /var/lib/marzban-node:/var/lib/marzban-node
-EOF
-        echo "Created new docker-compose.yml"
-
-        # Start the Docker Compose service
-        docker compose up -d
-
-        # Ask for SSL certificate location
-        echo "Please paste the SSL certificate content below (press Ctrl+D when finished):"
-        ssl_cert_path=$(</dev/stdin)
-
-        # Remove ssl_client_cert.pem
-        rm "/var/lib/marzban-node/ssl_client_cert.pem"
-
-        # Create a new ssl_client_cert.pem with provided path
-        echo "$ssl_cert_path" > /var/lib/marzban-node/ssl_client_cert.pem
-
-        echo "SSL certificate updated at /var/lib/marzban-node/ssl_client_cert.pem"
-
-        # Restart Docker Compose
-        docker compose down -v
-        docker compose up -d
-    fi
-}
-
-# Function to update Marzban-Node
-update_marzban_node() {
-    echo "Updating Marzban-Node..."
-        # Assuming /root/containers/Marzban-node exists and contains the previous installation
-        cd /root/containers/Marzban-node
-
-        # Fetch the latest changes from the repository
-        git pull origin master
-
-        # Pull the latest Docker images
-        docker compose pull
-
-        # Restart Docker Compose to apply changes
-        docker compose down
-        docker compose up -d
-
-        echo "Marzban-Node has been updated."
-}
-
-
-# Function to install haproxy to marzban
-turn_on_haproxy_marzban() {
-    read -p "Enter 'p' for panel or 'n' for node: " choice
-    read -p "Please input your panel domain: " domain
-    if [ "$choice" = "p" ]; then
-        # Configure Marzban environment file
-        sudo sed -i 's/UVICORN_HOST="0.0.0.0"/UVICORN_HOST="127.0.0.1"/g' /opt/marzban/.env
-        sudo sed -i 's/UVICORN_PORT=443/UVICORN_PORT=10000/g' /opt/marzban/.env
-        echo '      XRAY_FALLBACKS_INBOUND_TAG="TROJAN_FALLBACK_INBOUND"' >> /opt/marzban/.env
-
-        # Restart Marzban
-        marzban restart
-
-    elif [ "$choice" = "n" ]; then
-        echo "Skipping .env setup for Marzban."
-    else
-        echo "Invalid input. Enter 'p' for panel or 'n' for node."
-    fi
-
-    # Remove existing HAProxy
-    sudo systemctl unmask haproxy
-    sudo systemctl stop haproxy
-    sudo systemctl disable haproxy
-    sudo apt-get purge haproxy
-
-    # Update and install HAProxy
-    sudo apt update
-    sudo apt install -y haproxy
-
-    # Configure HAProxy using echo and tee
-    echo 'listen front
-        mode tcp
-        bind *:443
-
-        tcp-request inspect-delay 5s
-        tcp-request content accept if { req_ssl_hello_type 1 }
-
-        use_backend panel if { req.ssl_sni -m end '$domain' }
-
-        default_backend fallback
-
-    backend panel
-        mode tcp
-        server srv1 127.0.0.1:10000
-
-    backend fallback
-        mode tcp
-        server srv1 127.0.0.1:11000
-    ' >> /etc/haproxy/haproxy.cfg
-
-    # Restart HAProxy service
-    sudo systemctl restart haproxy
-}
-
 # Function to install Marzban Panel
 install_marzban_panel() {
     echo "Installing Marzban Panel..."
@@ -431,19 +916,12 @@ install_marzban_panel() {
         fi
     fi
 
-    apt update && apt upgrade -y && sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
-
-    # Replace the database
-    cp /home/ubuntu/db.sqlite3 /var/lib/marzban/db.sqlite3
-    sudo apt-get install socat
-
-
     # Install Xray for ARM
     if [ "$(arch)" == "aarch64" ]; then
         apt install unzip
-        rm -r /var/lib/marzban/xray-core/
-        mkdir -p /var/lib/marzban/xray-core/
-        cd /var/lib/marzban/xray-core/
+        rm -r /root/containers/marzban/xray-core/
+        mkdir -p /root/containers/marzban/xray-core/
+        cd /root/containers/marzban/xray-core/
         wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip -4
         unzip Xray-linux-arm64-v8a.zip
         rm Xray-linux-arm64-v8a.zip
@@ -453,74 +931,58 @@ install_marzban_panel() {
     # Install Xray for AMD
     if [ "$(arch)" == "x86_64" ]; then
         apt install unzip
-        rm -r /var/lib/marzban/xray-core/
-        mkdir -p /var/lib/marzban/xray-core/
-        cd /var/lib/marzban/xray-core/
+        rm -r /root/containers/marzban/xray-core/
+        mkdir -p /root/containers/marzban/xray-core/
+        cd /root/containers/marzban/xray-core/
         wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -4
         unzip Xray-linux-64.zip
         rm Xray-linux-64.zip
         cd
     fi
-    if sudo ufw status | grep -q "80.*ALLOW"; then
-        echo "Port 80 is already allowed."
-    else
-        echo "Allowing port 80 through UFW."
-        sudo ufw allow 80
-        echo "Port 80 has been allowed."
-    fi
     
-    sudo wget -N -P /var/lib/marzban/templates/subscription/  https://raw.githubusercontent.com/vblyrpv074/marzban-sub-clone/main/index.html
+    sudo wget -N -P /root/containers/marzban/templates/subscription/  https://raw.githubusercontent.com/vblyrpv074/marzban-sub-clone/main/index.html
+    sudo wget -N -P /root/containers/marzban/  https://raw.githubusercontent.com/vblyrpv074/marzban-sub-clone/main/index.html
 
-    rm /opt/marzban/.env
+    touch /root/containers/marzban/.env
+    touch /root/containers/marzban/db.sqlite3
+    touch /root/containers/marzban/xray_config.json
 
-    # Run script to register SSL for the domain (if provided)
-    read -p "Enter the domain for Marzban SSL registration (leave blank to skip): " domain
-    if [ -n "$domain" ]; then
-        # Register SSL for the domain
-        mkdir -p /var/lib/marzban/certs
+    cd /root/containers/marzban/
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  marzban:
+    image: gozargah/marzban:latest
+    container_name: marzban
+    restart: always
+    env_file: .env
+    ports:
+      - 127.0.0.1:8000:8000/tcp
+      - 443:443/tcp
+      - 65342:65342/tcp
+    volumes:
+      - /root/containers/marzban/:/root/containers/marzban/
+    networks:
+      - portainer
+EOF
+        cat <<EOF > .env
+UVICORN_HOST="0.0.0.0"
+UVICORN_PORT=8000
 
-        touch /opt/marzban/.env
-        
-        register_ssl "$domain" "/var/lib/marzban/certs"
+SUDO_USERNAME="1625b6aa-2815-40ec-a218-11e6c0262e52"
+SUDO_PASSWORD="4ae3db97-9ff0-4305-a68d-adbc6e0961ec"
 
-        # Configure Marzban environment file
-        echo 'UVICORN_HOST="0.0.0.0"
-        UVICORN_PORT=443
+XRAY_JSON="/root/containers/marzban/xray_config.json"
+XRAY_EXECUTABLE_PATH="/root/containers/marzban/xray-core/xray"
 
-        SUDO_USERNAME="1625b6aa-2815-40ec-a218-11e6c0262e52"
-        SUDO_PASSWORD="4ae3db97-9ff0-4305-a68d-adbc6e0961ec"
+SQLALCHEMY_DATABASE_URL="sqlite:////root/containers/marzban/db.sqlite3"
+CUSTOM_TEMPLATES_DIRECTORY="/root/containers/marzban/templates/"
+SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
+EOF
 
-        UVICORN_SSL_CERTFILE="/var/lib/marzban/certs/'$domain'.cert.crt"
-        UVICORN_SSL_KEYFILE="/var/lib/marzban/certs/'$domain'.private.key"
-
-        XRAY_JSON="/var/lib/marzban/xray_config.json"
-        XRAY_SUBSCRIPTION_URL_PREFIX=https://'$domain'
-        XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
-
-        SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
-
-        CUSTOM_TEMPLATES_DIRECTORY="/var/lib/marzban/templates/"
-        SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
-        ' >> /opt/marzban/.env
-    else
-        # Configure Marzban environment file without SSL details
-        echo 'UVICORN_HOST="0.0.0.0"
-        UVICORN_PORT=443
-
-        SUDO_USERNAME="1625b6aa-2815-40ec-a218-11e6c0262e52"
-        SUDO_PASSWORD="4ae3db97-9ff0-4305-a68d-adbc6e0961ec"
-
-        XRAY_JSON="/var/lib/marzban/xray_config.json"
-        XRAY_EXECUTABLE_PATH="/var/lib/marzban/xray-core/xray"
-
-        SQLALCHEMY_DATABASE_URL="sqlite:////var/lib/marzban/db.sqlite3"
-
-        CUSTOM_TEMPLATES_DIRECTORY="/var/lib/marzban/templates/"
-        SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
-        ' > /opt/marzban/.env
-    fi
-
-    marzban restart
+    cd /root/containers/marzban/ && docker compose restart
 }
 
 # Function to update Marzban Panel
@@ -528,11 +990,7 @@ update_marzban_panel() {
     echo "Updating Marzban Panel..."
 
     # Update the Marzban Panel script and components
-    marzban update
-
-    # Update the database if necessary
-    # For example, backup existing database and update schema if required
-    # This is a placeholder for database update logic
+    cd /root/containers/marzban/ && docker compose down && docker compose pull && docker compose up -d
 
     # Update Xray component
     if [ "$(arch)" == "aarch64" ]; then
@@ -562,11 +1020,98 @@ update_marzban_panel() {
     # Optionally, prompt for domain SSL renewal or automate as part of the update process
 
     # Restart Marzban to apply updates
-    marzban restart
+    cd /root/containers/marzban/ && docker compose restart
 
     echo "Marzban Panel has been updated."
 }
 
+# Function to install Marzban-Node
+install_marzban_node() {
+    echo "Installing Marzban-Node..."
+    if ! command -v docker &> /dev/null; then
+        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
+        if [ "$docker_choice" == "y" ]; then
+            install_docker
+        else
+            echo "Docker is not installed. Please install Docker first."
+        fi
+    else
+
+        #update package list
+        cd /root/containers/
+        apt-get update
+
+        # Clone the Marzban-Node repository
+        git clone https://github.com/Gozargah/Marzban-node
+        cd /root/containers/Marzban-node
+
+        # Remove existing docker-compose.yml
+        rm "docker-compose.yml"
+
+        # Create a new docker-compose.yml
+        cat <<EOF > docker-compose.yml
+networks:
+  portainer:
+    external: true
+services:
+  marzban-node:
+    image: gozargah/marzban-node:latest
+    restart: always
+    ports:
+      - 62050:62050/tcp
+      - 62051:62051/tcp
+
+    environment:
+      SERVICE_PORT: 62050
+      XRAY_API_PORT: 62051
+      SSL_CLIENT_CERT_FILE: "/root/containers/Marzban-node/ssl_client_cert.pem"
+
+    volumes:
+      - /root/containers/Marzban-node:/var/lib/marzban-node
+    networks:
+      - portainer
+EOF
+        echo "Created new docker-compose.yml"
+
+        # Start the Docker Compose service
+        docker compose up -d
+
+        # Ask for SSL certificate location
+        echo "Please paste the SSL certificate content below (press Ctrl+D when finished):"
+        ssl_cert_path=$(</dev/stdin)
+
+        # Remove ssl_client_cert.pem
+        rm "/root/containers/Marzban-node/ssl_client_cert.pem"
+
+        # Create a new ssl_client_cert.pem with provided path
+        echo "$ssl_cert_path" > /root/containers/Marzban-node/ssl_client_cert.pem
+
+        echo "SSL certificate updated at /root/containers/Marzban-node/ssl_client_cert.pem"
+
+        # Restart Docker Compose
+        docker compose down -v
+        docker compose up -d
+    fi
+}
+
+# Function to update Marzban-Node
+update_marzban_node() {
+    echo "Updating Marzban-Node..."
+        # Assuming /root/containers/Marzban-node exists and contains the previous installation
+        cd /root/containers/Marzban-node
+
+        # Fetch the latest changes from the repository
+        git pull origin master
+
+        # Pull the latest Docker images
+        docker compose pull
+
+        # Restart Docker Compose to apply changes
+        docker compose down
+        docker compose up -d
+
+        echo "Marzban-Node has been updated."
+}
 
 # Function to uninstall Marzban Panel
 uninstall_marzban_panel() {
@@ -583,12 +1128,8 @@ uninstall_marzban_node() {
 # Function to uninstall all Marzban components
 uninstall_all_marzban() {
     echo "Uninstalling all Marzban components..."
-    
-    # Uninstall Marzban Panel
-    cd && marzban uninstall
-    
-    # Uninstall Marzban Node
-    cd && cd /root/containers/Marzban-node && docker compose down -v && cd && rm -rf /root/containers/Marzban-node && rm -r /var/lib/marzban-node
+    uninstall_marzban_panel
+    uninstall_marzban_node
 }
 
 # Function to update the script from the provided link
@@ -690,7 +1231,6 @@ install_minecraft_pe_server() {
 
     # Create a Docker Compose configuration for the Minecraft server
     cat <<EOF > "/root/containers/minecraft/$server_name/docker-compose.yml"
-version: '3.8'
 services:
   minecraft-bedrock-server:
     image: itzg/minecraft-bedrock-server
@@ -1212,329 +1752,6 @@ trace() {
     #read -p "Enter the new WGCF license key: " new_key
     #WGCF_LICENSE_KEY="$new_key" ./wgcf update
 #}
-
-# Main menu
-main_menu() {
-    while true; do
-        clear
-        echo "Select an option: V: 1.4"
-        echo "1: Docker"
-        echo "2: Marzban"
-        echo "3: SSL Cert Management"
-        echo "4: Update Repositories"
-        echo "5: Minecraft PE Server"
-        echo "6: Fail2Ban for SSHD"
-        echo "7: Fail2Ban status"
-        echo "8: Config UFW"
-        echo "9: OpenVPN AS"
-        echo "10: wgcf"
-        echo "0: Quit"
-        echo "00: Update"
-
-        read -p "Enter your choice: " choice
-
-        case $choice in
-            1) docker_submenu ;;
-            2) marzban_submenu ;;
-            3) ssl_cert_management ;;
-            4) update_repositories ;;
-            5) minecraft_pe_server_submenu ;;
-            6) fail2bansshd ;;
-            7) fail2banstatus ;;
-            8) configure_ufw_security ;;
-            9) openvpn_as_submenu ;;
-            10) wgcf ;;
-            0) quit_script ;;
-            00) update_script ;;
-            *) echo "Invalid option. Please choose a valid option." ;;
-        esac
-
-        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            echo "Exiting..."
-            exit 0
-        fi
-    done
-}
-
-
-# Sub Menu
-# SUb menu for SSL certificate management (Menu)
-ssl_cert_management() {
-  local choice
-
-  # Consume any remaining input in the buffer
-  read -r -t 0.1 -n 10000
-
-  # Main menu
-  echo "SSL Certificate Management Menu"
-  echo "1: Register SSL for marzban (using /var/lib/marzban/certs)"
-  echo "2: Register SSL for x-ui (using /root/certs)"
-  echo "3: Show SSL Certificate Summary"
-  read -p "Select an option (1-3): " choice
-
-  case $choice in
-    1)
-      read -p "Enter the domain for Marzban SSL registration: " domain
-      mkdir -p /var/lib/marzban/certs
-      register_ssl "$domain" "/var/lib/marzban/certs"
-      ;;
-    2)
-      read -p "Enter the domain for x-ui SSL registration: " domain
-      mkdir -p /root/certs
-      register_ssl "$domain" "/root/certs"
-      ;;
-    3)
-      echo "SSL Certificates Summary:"
-      echo "Marzban: $(ls /var/lib/marzban/certs/ | grep -c '.cert.crt') certificates registered"
-      echo "x-ui: $(ls /root/certs/ | grep -c '.cert.crt') certificates registered"
-      ;;
-    *)
-      echo "Invalid choice. Please select a valid option."
-      ;;
-  esac
-}
-
-# Sub-menu for Docker options
-docker_submenu() {
-    while true; do
-        clear
-        echo "Docker Sub-Options:"
-        echo "1: Install Docker"
-        echo "2: Install Portainer"
-        echo "3: Install Portainer Agent"
-        echo "4: Install Alist"
-        echo "5: Install Caddy"
-
-        echo "6: Update Portainer"
-        echo "7: Update Portainer Agent"
-
-        echo "8: Uninstall Docker"
-
-        echo "0: Back to main menu"
-
-        docker ps -a
-
-        read -p "Enter your choice: " docker_choice
-
-        case "$docker_choice" in
-            1) install_docker ;;
-            2) install_portainer ;;
-            3) install_portainer_agent ;;
-            4) install_alist ;;
-            5) install_caddy ;;
-
-            6) update_portainer ;;
-            7) update_portainer_agent ;;
-
-            8) uninstall_docker ;;
-            
-            0) break ;;
-            *)
-                echo "Invalid option. Please choose a valid option."
-                ;;
-        esac
-    done
-}
-
-# Sub-menu for wgcf
-wgcf() {
-    while true; do
-        echo "Choose an option:"
-        echo "1. Generate configuration"
-        echo "2. Check status"
-        echo "3. Trace"
-        echo "0. Back to main menu"
-
-        read -p "Enter your choice: " choice
-
-        case $choice in
-            1)
-                generate
-                ;;
-            2)
-                check_status
-                ;;
-            3)
-                trace
-                ;;
-            0)
-                break
-                ;;
-            *)
-                echo "Invalid choice. Please enter a valid option."
-                ;;
-        esac
-    done
-}
-
-# Sub-menu configure UFW (Uncomplicated Firewall) security
-configure_ufw_security() {
-    echo "Configuring UFW (Uncomplicated Firewall) security..."
-
-    # Check if UFW is installed
-    if ! command -v ufw &> /dev/null; then
-        read -p "UFW is not available! Do you want to install? (y/n) " ufw_choice
-        if [ "$ufw_choice" == "y" ]; then
-            install_ufw
-        else
-            echo "UFW is not installed. Please install UFW first."
-            return
-        fi
-    fi
-
-    while true; do
-        echo "UFW Security Sub-Options:"
-        echo "1: Allow port for Marzban"
-        echo "2: Allow port for Wordpress"
-        echo "3: Allow port for OpenVPN"
-        echo "0: Back to main menu"
-        echo "00: Reset UFW"
-
-        read -p "Enter your choice: " sub_choice
-
-        case $sub_choice in
-            1) allow_port_for_marzban ;;
-            2) allow_port_for_wordpress ;;
-            3) allow_port_for_openvpn ;;
-            0) break ;;
-            00) reset_ufw ;;
-            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-        esac
-    done
-}
-
-# Sub-menu for Marzban options
-marzban_submenu() {
-    while true; do
-        clear  
-        echo "Marzban Sub-Options:"
-        echo "1: Install Marzban Panel"
-        echo "2: Update Marzban Panel"
-        echo "3: Install Marzban Node"
-        echo "4: Update Marzban Node"
-        echo "5: Display SSL certificate (Node)"
-        echo "6: Uninstall Marzban"
-        echo "7: Turn on Haproxy"
-        echo "0: Back to main menu"
-
-        read -p "Enter your choice: " sub_choice
-
-        case $sub_choice in
-            1) install_marzban_panel ;;
-            2) update_marzban_panel ;;
-            3) install_marzban_node ;;
-            4) update_marzban_node ;;
-            5) display_ssl_certificate ;;
-            6) uninstall_marzban_submenu ;;
-            7) turn_on_haproxy_marzban ;;
-            0) break ;;
-            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-        esac
-
-        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            echo "Exiting..."
-            exit 0
-        fi
-    done
-}
-
-# Sub-menu for Marzban uninstall options
-uninstall_marzban_submenu() {
-    while true; do
-        clear  
-        echo "Uninstall Marzban Sub-Options:"
-        echo "1: Uninstall Marzban Panel"
-        echo "2: Uninstall Marzban Node"
-        echo "3: Uninstall all Marzban components"
-        echo "0: Back to Marzban menu"
-        echo "00: Back to main menu"
-
-        read -p "Enter your choice: " uninstall_choice
-
-        case $uninstall_choice in
-            1) uninstall_marzban_panel ;;
-            2) uninstall_marzban_node ;;
-            3) uninstall_all_marzban ;;
-            0) break ;;
-            00) break 2 ;;
-            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-        esac
-
-        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            echo "Exiting..."
-            exit 0
-        fi
-    done
-}
-
-# Sub-menu for Minecraft PE Server
-minecraft_pe_server_submenu() {
-    while true; do
-        clear  
-        echo "Minecraft PE Server Sub-Options:"
-        echo "1: Install Minecraft Server"
-        echo "2: Edit Port and Difficulty"
-        echo "3: Enable Coordinates"
-        echo "4: Remove Minecraft Server"
-        echo "0: Back to main menu"
-
-        read -p "Enter your choice: " sub_choice
-
-        case $sub_choice in
-            1) install_minecraft_pe_server ;;
-            2) edit_minecraft_pe_server ;;
-            3) enable_coordinates ;;
-            4) remove_minecraft_pe_server ;;
-            0) break ;;
-            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-        esac
-        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            echo "Exiting..."
-            exit 0
-        fi
-    done
-}
-
-# Function to manage OpenVPN AS
-openvpn_as_submenu() {
-    while true; do
-        clear
-        echo "OpenVPN AS Menu:"
-        echo "1: Install OpenVPN AS"
-        echo "2: Uninstall OpenVPN AS"
-        echo "3: Backup OpenVPN AS"
-        echo "4: Restore OpenVPN AS"
-        echo "0: Back"
-
-        read -p "Enter your choice: " choice
-
-        case $choice in
-            1) install_openvpn_as ;;
-            2) remove_openvpn_as ;;
-            3) backup_openvpn_as ;;
-            4) restore_openvpn_as_backup ;;
-            0) break ;;
-            *) echo "Invalid option. Please choose a valid option." ;;
-        esac
-
-        read -p "Press any key to return to the OpenVPN AS menu or 'q' to go back to the main menu." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            break
-        fi
-    done
-}
-
-
-# Function to quit the script
-quit_script() {
-    echo "Exiting..."
-    exit 0
-}
-
 
 # Start the main menu
 main_menu
