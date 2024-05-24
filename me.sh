@@ -6,7 +6,7 @@
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 2.2"
+        echo "Select an option: V: 2.3"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -98,6 +98,8 @@ docker_submenu() {
         echo "7: Install OVPN admin ui"
         echo "8: Install Uptime KUMA"
         echo "9: Install Telegram Backup"
+        echo "-----"
+        echo ""
 
         echo "12: Update Portainer"
         echo "13: Update Portainer Agent"
@@ -106,8 +108,14 @@ docker_submenu() {
         echo "16: Update Cloudflared"
         echo "17: Uinstall OVPN admin ui"
         echo "18: Uinstall Uptime KUMA"
+        echo "-----"
+        echo ""
 
         echo "01: Uninstall Docker"
+        echo ""
+        echo ""
+
+        echo "107: Restore OVPN admin ui"
 
         echo "0: Back to main menu"
 
@@ -135,6 +143,8 @@ docker_submenu() {
             18) update_uptimekuma ;;
 
             01) uninstall_docker ;;
+
+            107) restore_ovpn_admin ;;
             
             0) break ;;
             *)
@@ -588,6 +598,16 @@ update_portainer_agent() {
 
 }
 
+# Function to restore ovpn admin
+restore_ovpn_admin() {
+    echo "Restoring OpenVPN Admin GUI..."
+    cd
+
+    rsync -av /home/ubuntu/ovpnadmin/ /root/containers/ovpnadmin/
+
+    cd /root/containers/ovpnadmin/ && docker compose down -v && docker compose up -d
+}
+
 # Function to install Portainer Agent
 install_ovpn_admin() {
     echo "Installing OpenVPN Admin GUI..."
@@ -633,7 +653,7 @@ services:
     openvpn-as:
         image: d3vilh/openvpn-server:latest
         privileged: true
-        container_name: openvpn-as-ui
+        container_name: openvpn
         restart: unless-stopped
         environment:
           TRUST_SUB: 10.0.70.0/24
@@ -784,25 +804,8 @@ telegram_backup() {
     mkdir -p /root/containers/tgbackup/data
     cd /root/containers/tgbackup
 
+    wget --inet4-only https://raw.githubusercontent.com/pandaaxi/mine/main/telegram-backup/docker-compose.yml -O docker-compose.yml
 
-        cat <<EOF > docker-compose.yml
-networks:
-  portainer:
-    external: true
-services:
-    alist:
-        image: 'jianhua123/telegram-backup:latest'
-        container_name: tgbackup
-        restart: unless-stopped
-        volumes:
-            - /root/containers/tgbackup/data:/app/data
-        environment:
-            - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-            - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-            - BACKUP_DELAY=${BACKUP_DELAY}
-        networks:
-            - portainer
-EOF
     read -p "Enter the telegram bot token: " tgtoken
     read -p "Enter the telegram chat ID: " chatID
 
@@ -834,7 +837,6 @@ EOF
         echo "Invalid choice. Exiting."
         exit 1
     fi
-
     (crontab -l 2>/dev/null; echo "$cron_interval $cron_command") | crontab -
     echo "Crontab added: $cron_interval $cron_command"
 
