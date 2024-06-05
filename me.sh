@@ -986,7 +986,7 @@ CUSTOM_TEMPLATES_DIRECTORY="/root/containers/marzban/templates/"
 SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
 EOF
 
-    cd /root/containers/marzban/ && docker compose restart
+    cd /root/containers/marzban/ && docker compose up -d
 }
 
 # Function to update Marzban Panel
@@ -1064,11 +1064,13 @@ services:
     ports:
       - 62050:62050/tcp
       - 62051:62051/tcp
+      - 65342:65342/tcp
+      - 443:443/tcp
 
     environment:
       SERVICE_PORT: 62050
       XRAY_API_PORT: 62051
-      SSL_CLIENT_CERT_FILE: "/root/containers/Marzban-node/ssl_client_cert.pem"
+      SSL_CLIENT_CERT_FILE: "/var/lib/marzban-node/ssl_client_cert.pem"
 
     volumes:
       - /root/containers/Marzban-node:/var/lib/marzban-node
