@@ -6,7 +6,7 @@
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 2.4"
+        echo "Select an option: V: 2.5"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -21,6 +21,7 @@ main_menu() {
         echo "12: Hexo Blog"
         echo "13: Nginx Proxy Manager"
         echo "14: Install Pihole + Unbound"
+        echo "15: System Information"
         echo "0: Quit"
         echo "00: Update"
 
@@ -41,6 +42,7 @@ main_menu() {
             12) hexo_blog ;;
             13) nginx_proxy_manager ;;
             14) install_pihole_unbound ;;
+            15) system_information ;;  # Added system information option
             0) quit_script ;;
             00) update_script ;;
             *) echo "Invalid option. Please choose a valid option." ;;
@@ -1743,6 +1745,39 @@ enable_coordinates() {
 
     echo "Coordinates have been enabled in the selected Minecraft PE Server."
 }
+
+# Function to display system information
+system_information() {
+    echo "Fetching system information..."
+
+    # Display system information using lsb_release, if available
+    if command -v lsb_release &> /dev/null; then
+        lsb_release -a
+    else
+        echo "lsb_release not found, displaying /etc/os-release instead."
+        cat /etc/os-release
+    fi
+
+    # Display kernel version
+    uname -r
+
+    # Display CPU information
+    echo "CPU Information:"
+    lscpu
+
+    # Display memory information
+    echo "Memory Information:"
+    free -h
+
+    # Display disk usage
+    echo "Disk Usage:"
+    df -h
+
+    # Display network interfaces
+    echo "Network Interfaces:"
+    ip addr
+}
+
 
 # Start the main menu
 main_menu
