@@ -6,7 +6,7 @@
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 2.3"
+        echo "Select an option: V: 2.4"
         echo "1: Docker"
         echo "2: Marzban"
         echo "3: SSL Cert Management"
@@ -1264,8 +1264,7 @@ volumes:
 EOF
 
     # Start the Minecraft server
-    cd "/root/containers/minecraft/$server_name"
-    docker-compose up -d
+    cd "/root/containers/minecraft/$server_name" && docker-compose up -d
 
     # Print server information
     echo "Minecraft PE Server '$server_name' has been installed."
@@ -1671,19 +1670,29 @@ generate() {
     else
         echo "wgcf file already exists. Skipping download."
     fi
+
     cd /root/warpgen/
 
-    rm -fr wgcf-account.toml
+    rm -f wgcf-account.toml
     ./wgcf register
     sleep 2 # Adding a delay of 2 seconds
+
     cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
+
     read -p "Enter the new WGCF license key: " new_key
     WGCF_LICENSE_KEY="$new_key" ./wgcf update
     sleep 2
     cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
+
     # Fetching device_id and access_token from wgcf-account.toml
     device_id=$(grep -oP "device_id = '\K[^']+" wgcf-account.toml)
     access_token=$(grep -oP "access_token = '\K[^']+" wgcf-account.toml)
+
+    # Check if device_id and access_token were extracted
+    if [ -z "$device_id" ] || [ -z "$access_token" ]; then
+        echo "Error: device_id or access_token not found in wgcf-account.toml."
+        exit 1
+    fi
 
     # Fetching information using curl command
     response=$(curl --request GET "https://api.cloudflareclient.com/v0a2158/reg/$device_id" \
@@ -1697,11 +1706,24 @@ generate() {
     # Extracting client_id from the response
     client_id=$(echo "$response" | jq -r '.config.client_id')
 
+    # Check if client_id is extracted successfully
+    if [ -z "$client_id" ]; then
+        echo "Error: client_id not found in the response."
+        exit 1
+    fi
+
     # Converting client_id into array format [14, 116, 111]
-    client_id_array=$(echo "$client_id" | base64 -d | xxd -p | fold -w2 | while read HEX; do printf '%d ' "0x${HEX}"; done | awk '{print "["$1", "$2", "$3"]"}')
+    client_id_array=$(echo "$client_id" | base64 -d 2>/dev/null | xxd -p | fold -w2 | while read HEX; do printf '%d ' "0x${HEX}"; done | awk '{print "["$1", "$2", "$3"]"}')
+
+    # Check if client_id_array is generated successfully
+    if [ -z "$client_id_array" ]; then
+        echo "Error: client_id_array generation failed."
+        exit 1
+    fi
+
+    echo "client_id_array: $client_id_array"
 
     ./wgcf generate
-
     sleep 2 # Adding a delay of 2 seconds
 
     # Fetching PrivateKey and Address from wgcf-profile.conf
@@ -1711,6 +1733,13 @@ generate() {
     # Extracting individual IPv4 and IPv6 addresses
     ipv4=$(echo "$addresses" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+')
     ipv6=$(echo "$addresses" | grep -Eo '([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}/[0-9]+')
+
+    # Check if both IPv4 and IPv6 addresses are extracted
+    if [ -z "$ipv4" ] || [ -z "$ipv6" ]; then
+        echo "Error: Unable to extract IPv4 or IPv6 addresses."
+        exit 1
+    fi
+
     # Creating wireguard.json file
     cat > wireguard.json <<EOF
 {
