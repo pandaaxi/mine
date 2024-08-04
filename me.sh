@@ -1779,7 +1779,7 @@ check_reserved() {
 
     # Converting client_id into array format [14, 116, 111]
     client_id_array=$(echo "$client_id" | base64 -d | xxd -p | fold -w2 | while read HEX; do printf '%d ' "0x${HEX}"; done | awk '{print "["$1", "$2", "$3"]"}')
-    client_id_array
+    echo $client_id_array
 }
 # Function to change license key
 #change_key() {
