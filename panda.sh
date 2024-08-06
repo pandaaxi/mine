@@ -6,11 +6,12 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.0.2"
+        echo "V0.0.3"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
         echo "3. System Clean"
+        echo "------------------------"
         echo "4. System Tools"
         echo "5. Docker Management"
         echo "6. WARP Management"
@@ -55,6 +56,40 @@ main_menu() {
         esac
         read -p "Press any key to continue..." key
     done
+}
+
+# Non Manual Function
+output_status() {
+    output=$(awk 'BEGIN { rx_total = 0; tx_total = 0 }
+        NR > 2 { rx_total += $2; tx_total += $10 }
+        END {
+            rx_units = "Bytes";
+            tx_units = "Bytes";
+            if (rx_total > 1024) { rx_total /= 1024; rx_units = "KB"; }
+            if (rx_total > 1024) { rx_total /= 1024; rx_units = "MB"; }
+            if (rx_total > 1024) { rx_total /= 1024; rx_units = "GB"; }
+
+            if (tx_total > 1024) { tx_total /= 1024; tx_units = "KB"; }
+            if (tx_total > 1024) { tx_total /= 1024; tx_units = "MB"; }
+            if (tx_total > 1024) { tx_total /= 1024; tx_units = "GB"; }
+
+            printf("总接收: %.2f %s\n总发送: %.2f %s\n", rx_total, rx_units, tx_total, tx_units);
+        }' /proc/net/dev)
+
+}
+
+ip_address() {
+ipv4_address=$(curl -s ipv4.ip.sb)
+ipv6_address=$(curl -s --max-time 1 ipv6.ip.sb)
+}
+
+current_timezone() {
+    if grep -q 'Alpine' /etc/issue; then
+       date +"%Z %z"
+    else
+       timedatectl | grep "Time zone" | awk '{print $3}'
+    fi
+
 }
 
 # Function Script
@@ -263,19 +298,19 @@ while true; do
             ;;
         4)
             while true; do
-            swap_used=$(free -m | awk 'NR==3{print $3}')
-            swap_total=$(free -m | awk 'NR==3{print $2}')
+                swap_used=$(free -m | awk 'NR==3{print $3}')
+                swap_total=$(free -m | awk 'NR==3{print $2}')
 
-            if [ "$swap_total" -eq 0 ]; then
-              swap_percentage=0
-            else
-              swap_percentage=$((swap_used * 100 / swap_total))
-            fi
+                if [ "$swap_total" -eq 0 ]; then
+                swap_percentage=0
+                else
+                swap_percentage=$((swap_used * 100 / swap_total))
+                fi
 
-            swap_info="${swap_used}MB/${swap_total}MB (${swap_percentage}%)"
-
-            echo "Current Swap Memory: $swap_info"
+                swap_info="${swap_used}MB/${swap_total}MB (${swap_percentage}%)"
                 clear
+                echo "Current Swap Memory: $swap_info"
+                echo ""
                 echo "Swap Memory Management"
                 echo "------------------------"
                 echo "1. Add 1024MB Swap"
@@ -857,37 +892,3 @@ quit_script() {
 }
 
 main_menu
-
-# Non Manual Function
-output_status() {
-    output=$(awk 'BEGIN { rx_total = 0; tx_total = 0 }
-        NR > 2 { rx_total += $2; tx_total += $10 }
-        END {
-            rx_units = "Bytes";
-            tx_units = "Bytes";
-            if (rx_total > 1024) { rx_total /= 1024; rx_units = "KB"; }
-            if (rx_total > 1024) { rx_total /= 1024; rx_units = "MB"; }
-            if (rx_total > 1024) { rx_total /= 1024; rx_units = "GB"; }
-
-            if (tx_total > 1024) { tx_total /= 1024; tx_units = "KB"; }
-            if (tx_total > 1024) { tx_total /= 1024; tx_units = "MB"; }
-            if (tx_total > 1024) { tx_total /= 1024; tx_units = "GB"; }
-
-            printf("总接收: %.2f %s\n总发送: %.2f %s\n", rx_total, rx_units, tx_total, tx_units);
-        }' /proc/net/dev)
-
-}
-
-ip_address() {
-ipv4_address=$(curl -s ipv4.ip.sb)
-ipv6_address=$(curl -s --max-time 1 ipv6.ip.sb)
-}
-
-current_timezone() {
-    if grep -q 'Alpine' /etc/issue; then
-       date +"%Z %z"
-    else
-       timedatectl | grep "Time zone" | awk '{print $3}'
-    fi
-
-}
