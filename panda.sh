@@ -262,6 +262,18 @@ while true; do
             ;;
         4)
             while true; do
+            swap_used=$(free -m | awk 'NR==3{print $3}')
+            swap_total=$(free -m | awk 'NR==3{print $2}')
+
+            if [ "$swap_total" -eq 0 ]; then
+              swap_percentage=0
+            else
+              swap_percentage=$((swap_used * 100 / swap_total))
+            fi
+
+            swap_info="${swap_used}MB/${swap_total}MB (${swap_percentage}%)"
+
+            echo "Current Swap Memory: $swap_info"
                 clear
                 echo "Swap Memory Management"
                 echo "------------------------"
