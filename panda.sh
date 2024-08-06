@@ -6,7 +6,7 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.0.1"
+        echo "V0.0.2"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
@@ -841,9 +841,9 @@ update_script() {
     echo "Updating the script..."
 
     # Download the updated script
-    updated_script_url="https://raw.githubusercontent.com/vblyrpv074/mine/main/panda.sh"
-    if curl -fsSL -o me.sh "$updated_script_url"; then
-        chmod +x me.sh
+    updated_script_url="https://raw.githubusercontent.com/pandaaxi/mine/main/panda.sh"
+    if curl -fsSL -o panda.sh "$updated_script_url"; then
+        chmod +x panda.sh
         echo "Script updated successfully."
         exit 0  # Exit after updating to avoid any issues
     else
