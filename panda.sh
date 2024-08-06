@@ -1,142 +1,507 @@
 #!/bin/bash
 
-# Function script
+# Menu
 
-# Main menu
 main_menu() {
     while true; do
         clear
-        echo "Select an option: V: 2.5"
-        echo "1: Docker"
-        echo "2: Marzban"
-        echo "3: SSL Cert Management"
-        echo "4: Update Repositories"
-        echo "5: Minecraft PE Server"
-        echo "6: Fail2Ban for SSHD"
-        echo "7: Fail2Ban status"
-        echo "8: Config UFW"
-        echo "9: OpenVPN AS"
-        echo "10: wgcf"
-        echo "11: Cloudreve"
-        echo "12: Hexo Blog"
-        echo "13: Nginx Proxy Manager"
-        echo "14: Install Pihole + Unbound"
-        echo "15: System Information"
-        echo "0: Quit"
-        echo "00: Update"
-
+        echo "▶ Main Menu"
+        echo "------------------------"
+        echo "1. System Information Query"
+        echo "2. System Update"
+        echo "3. System Clean"
+        echo "4. System Tools"
+        echo "5. Docker Management"
+        echo "6. WARP Management"
+        echo "7. WGCF Management"
+        echo "------------------------"
+        echo "00. Script Update"
+        echo "0. Quit"
+        echo "------------------------"
         read -p "Enter your choice: " choice
 
         case $choice in
-            1) docker_submenu ;;
-            2) marzban_submenu ;;
-            3) ssl_cert_management ;;
-            4) update_repositories ;;
-            5) minecraft_pe_server_submenu ;;
-            6) fail2bansshd ;;
-            7) fail2banstatus ;;
-            8) configure_ufw_security ;;
-            9) openvpn_as_submenu ;;
-            10) wgcf ;;
-            11) cloudreve_submenu ;;
-            12) hexo_blog ;;
-            13) nginx_proxy_manager ;;
-            14) install_pihole_unbound ;;
-            15) system_information ;;  # Added system information option
-            0) quit_script ;;
-            00) update_script ;;
-            *) echo "Invalid option. Please choose a valid option." ;;
+            1)
+                system_info_query
+                ;;
+            2)
+                system_update
+                ;;
+            3)
+                system_clean
+                ;;
+            4)
+                system_tools
+                ;;
+            5)
+                docker_management
+                ;;
+            6)
+                warp_management
+                ;;
+            7)
+                wgcf
+                ;;
+            00)
+                update_script
+                ;;
+            0)
+                quit_script
+                ;;
+            *)
+                echo "Invalid input! Please enter a valid option."
+                ;;
         esac
-
-        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            echo "Exiting..."
-            exit 0
-        fi
+        read -p "Press any key to continue..." key
     done
 }
 
-# Submenu for Docker options
-docker_submenu() {
+# Function Script
+
+# Function to retrieve and display system information
+system_info_query() {
+    clear
+    # Function: Get IPv4 and IPv6 addresses
+    ip_address
+
+    if [ "$(uname -m)" == "x86_64" ]; then
+      cpu_info=$(cat /proc/cpuinfo | grep 'model name' | uniq | sed -e 's/model name[[:space:]]*: //')
+    else
+      cpu_info=$(lscpu | grep 'BIOS Model name' | awk -F': ' '{print $2}' | sed 's/^[ \t]*//')
+    fi
+
+    if [ -f /etc/alpine-release ]; then
+        # Use the following command for Alpine Linux to get CPU usage
+        cpu_usage_percent=$(top -bn1 | grep '^CPU' | awk '{print " "$4}' | cut -c 1-2)
+    else
+        # Use the following command for other systems to get CPU usage
+        cpu_usage_percent=$(top -bn1 | grep "Cpu(s)" | awk '{print " "$2}')
+    fi
+
+    cpu_cores=$(nproc)
+
+    mem_info=$(free -b | awk 'NR==2{printf "%.2f/%.2f MB (%.2f%%)", $3/1024/1024, $2/1024/1024, $3*100/$2}')
+
+    disk_info=$(df -h | awk '$NF=="/"{printf "%s/%s (%s)", $3, $2, $5}')
+
+    country=$(curl -s ipinfo.io/country)
+    city=$(curl -s ipinfo.io/city)
+
+    isp_info=$(curl -s ipinfo.io/org)
+
+    cpu_arch=$(uname -m)
+
+    hostname=$(hostname)
+
+    kernel_version=$(uname -r)
+
+    congestion_algorithm=$(sysctl -n net.ipv4.tcp_congestion_control)
+    queue_algorithm=$(sysctl -n net.core.default_qdisc)
+
+    # Attempt to use lsb_release to get system information
+    os_info=$(lsb_release -ds 2>/dev/null)
+
+    # If the lsb_release command fails, try other methods
+    if [ -z "$os_info" ]; then
+      # Check common release files
+      if [ -f "/etc/os-release" ]; then
+        os_info=$(source /etc/os-release && echo "$PRETTY_NAME")
+      elif [ -f "/etc/debian_version" ]; then
+        os_info="Debian $(cat /etc/debian_version)"
+      elif [ -f "/etc/redhat-release" ]; then
+        os_info=$(cat /etc/redhat-release)
+      else
+        os_info="Unknown"
+      fi
+    fi
+
+    output_status
+
+    current_time=$(date "+%Y-%m-%d %I:%M %p")
+
+    swap_used=$(free -m | awk 'NR==3{print $3}')
+    swap_total=$(free -m | awk 'NR==3{print $2}')
+
+    if [ "$swap_total" -eq 0 ]; then
+        swap_percentage=0
+    else
+        swap_percentage=$((swap_used * 100 / swap_total))
+    fi
+
+    swap_info="${swap_used}MB/${swap_total}MB (${swap_percentage}%)"
+
+    runtime=$(cat /proc/uptime | awk -F. '{run_days=int($1 / 86400);run_hours=int(($1 % 86400) / 3600);run_minutes=int(($1 % 3600) / 60); if (run_days > 0) printf("%d days ", run_days); if (run_hours > 0) printf("%d hrs ", run_hours); printf("%d mins\n", run_minutes)}')
+
+    timezone=$(current_timezone)
+
+    echo ""
+    echo "System Information Query"
+    echo "------------------------"
+    echo "Hostname: $hostname"
+    echo "ISP: $isp_info"
+    echo "------------------------"
+    echo "OS Version: $os_info"
+    echo "Linux Version: $kernel_version"
+    echo "------------------------"
+    echo "CPU Architecture: $cpu_arch"
+    echo "CPU Model: $cpu_info"
+    echo "CPU Cores: $cpu_cores"
+    echo "------------------------"
+    echo "CPU Usage: $cpu_usage_percent%"
+    echo "Physical Memory: $mem_info"
+    echo "Swap Memory: $swap_info"
+    echo "Disk Usage: $disk_info"
+    echo "------------------------"
+    echo "$output"
+    echo "------------------------"
+    echo "Network Congestion Algorithm: $congestion_algorithm $queue_algorithm"
+    echo "------------------------"
+    echo "Public IPv4 Address: $ipv4_address"
+    echo "Public IPv6 Address: $ipv6_address"
+    echo "------------------------"
+    echo "Geographic Location: $country $city"
+    echo "System Timezone: $timezone"
+    echo "System Time: $current_time"
+    echo "------------------------"
+    echo "System Uptime: $runtime"
+    echo
+}
+
+# Function to update the system
+system_update() {
+
+    # Update system on Debian-based systems
+    if [ -f "/etc/debian_version" ]; then
+        apt update -y && DEBIAN_FRONTEND=noninteractive apt full-upgrade -y
+    fi
+
+    # Update system on Red Hat-based systems
+    if [ -f "/etc/redhat-release" ]; then
+        yum -y update
+    fi
+
+    # Update system on Alpine Linux
+    if [ -f "/etc/alpine-release" ]; then
+        apk update && apk upgrade
+    fi
+
+}
+
+# Function to clean up the system
+system_clean() {
+    clean_debian() {
+        apt autoremove --purge -y
+        apt clean -y
+        apt autoclean -y
+        apt remove --purge $(dpkg -l | awk '/^rc/ {print $2}') -y
+        journalctl --rotate
+        journalctl --vacuum-time=1s
+        journalctl --vacuum-size=50M
+        apt remove --purge $(dpkg -l | awk '/^ii linux-(image|headers)-[^ ]+/{print $2}' | grep -v $(uname -r | sed 's/-.*//') | xargs) -y
+    }
+
+    clean_redhat() {
+        yum autoremove -y
+        yum clean all
+        journalctl --rotate
+        journalctl --vacuum-time=1s
+        journalctl --vacuum-size=50M
+        yum remove $(rpm -q kernel | grep -v $(uname -r)) -y
+    }
+
+    clean_alpine() {
+        apk del --purge $(apk info --installed | awk '{print $1}' | grep -v $(apk info --available | awk '{print $1}'))
+        apk autoremove
+        apk cache clean
+        rm -rf /var/log/*
+        rm -rf /var/cache/apk/*
+
+    }
+
+    # Main script
+    if [ -f "/etc/debian_version" ]; then
+        # Debian-based systems
+        clean_debian
+    elif [ -f "/etc/redhat-release" ]; then
+        # Red Hat-based systems
+        clean_redhat
+    elif [ -f "/etc/alpine-release" ]; then
+        # Alpine Linux
+        clean_alpine
+    fi
+
+}
+
+# Sub menu for System Tools
+while true; do
+    clear
+    echo "▶ System Tools"
+    echo "------------------------"
+    echo "1. Set DNS Address"
+    echo "2. Set SSH Port"
+    echo "3. Manage SSH Key Authentication"
+    echo "4. Swap Memory Management"
+    echo "5. Reboot Server"
+    echo "------------------------"
+    echo "0. Return to Main Menu"
+    echo "------------------------"
+    read -p "Enter your choice: " sub_choice
+
+    case $sub_choice in
+        1)
+            set_dns
+            ;;
+        2)
+            echo "Enter the new SSH port: "
+            read new_port
+            set_ssh_port $new_port
+            ;;
+        3)
+            manage_ssh_key_auth
+            ;;
+        4)
+            while true; do
+                clear
+                echo "Swap Memory Management"
+                echo "------------------------"
+                echo "1. Add 1024MB Swap"
+                echo "2. Add 2048MB Swap"
+                echo "3. Manually Add Swap Memory"
+                echo "4. Disable Swap"
+                echo "------------------------"
+                echo "0. Return to System Tools"
+                echo "------------------------"
+                read -p "Enter your choice: " swap_choice
+
+                case $swap_choice in
+                    1) add_swap 1024 ;;
+                    2) add_swap 2048 ;;
+                    3) 
+                        echo "Enter the swap size in MB: "
+                        read swap_size
+                        add_swap $swap_size
+                        ;;
+                    4) disable_swap ;;
+                    0) break ;;
+                    *) echo "Invalid choice!" ;;
+                esac
+            done
+            ;;
+        5)
+            reboot_server
+            ;;
+        0)
+            break  # Exit the loop, return to the main menu
+            ;;
+        *)
+            echo "Invalid input!"
+            ;;
+    esac
+    break_end
+done
+
+set_dns() {
+    # Check if the machine has an IPv6 address
+    ipv6_available=0
+    if [[ $(ip -6 addr | grep -c "inet6") -gt 0 ]]; then
+        ipv6_available=1
+    fi
+
+    echo "nameserver $dns1_ipv4" > /etc/resolv.conf
+    echo "nameserver $dns2_ipv4" >> /etc/resolv.conf
+
+    if [[ $ipv6_available -eq 1 ]]; then
+        echo "nameserver $dns1_ipv6" >> /etc/resolv.conf
+        echo "nameserver $dns2_ipv6" >> /etc/resolv.conf
+    fi
+
+    echo "DNS addresses updated"
+    echo "------------------------"
+    cat /etc/resolv.conf
+    echo "------------------------"
+}
+
+set_ssh_port() {
+    new_port=$1
+
+    # Backup the SSH configuration file
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+
+    # Ensure the Port line is uncommented and updated
+    sed -i 's/^\s*#\?\s*Port/Port/' /etc/ssh/sshd_config
+
+    # Replace the port number in the SSH configuration file
+    sed -i "s/Port [0-9]\+/Port $new_port/g" /etc/ssh/sshd_config
+
+    # Restart the SSH service
+    restart_ssh
+    echo "SSH port has been changed to: $new_port"
+
+    clear
+    iptables_open
+    remove iptables-persistent ufw firewalld iptables-services > /dev/null 2>&1
+}
+
+manage_ssh_key_auth() {
+    # Generate an SSH key pair
+    ssh-keygen -t ed25519 -C "xxxx@gmail.com" -f /root/.ssh/sshkey -N ""
+
+    # Add the public key to authorized_keys
+    cat ~/.ssh/sshkey.pub >> ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+
+    ip_address
+    echo -e "Private key information has been generated. Be sure to copy and save it as a file named ${huang}${ipv4_address}_ssh.key${bai} for future SSH logins."
+    echo "--------------------------------"
+    cat ~/.ssh/sshkey
+    echo "--------------------------------"
+
+    # Update SSH configuration for key-based authentication
+    sed -i -e 's/^\s*#\?\s*PermitRootLogin .*/PermitRootLogin prohibit-password/' \
+           -e 's/^\s*#\?\s*PasswordAuthentication .*/PasswordAuthentication no/' \
+           -e 's/^\s*#\?\s*PubkeyAuthentication .*/PubkeyAuthentication yes/' \
+           -e 's/^\s*#\?\s*ChallengeResponseAuthentication .*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+    rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
+    echo -e "${lv}ROOT key-based login has been enabled. Password login for ROOT is disabled. Changes will take effect on reconnection.${bai}"
+}
+
+add_swap() {
+    swap_size=$1
+
+    # Turn off any existing swap
+    swapoff -a
+
+    # Remove any existing swapfile
+    rm -f /swapfile
+
+    # Create a new swapfile of the specified size
+    dd if=/dev/zero of=/swapfile bs=1M count=$swap_size
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+
+    # Add the swapfile to /etc/fstab for persistence
+    if ! grep -q '/swapfile swap swap defaults 0 0' /etc/fstab; then
+        echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+    fi
+
+    echo -e "Swap memory of size ${huang}${swap_size}${bai}MB has been added."
+}
+
+disable_swap() {
+    # Disable swap memory
+    swapoff /swapfile
+
+    # Remove the swapfile entry from /etc/fstab
+    sed -i '/\/swapfile swap swap defaults 0 0/d' /etc/fstab
+
+    # Remove the swapfile
+    rm -f /swapfile
+
+    echo "Swap memory disabled."
+}
+
+
+reboot_server() {
+    read -p "$(echo -e "${huang}Do you want to reboot the server now? (Y/N): ${bai}")" rboot
+    case "$rboot" in
+        [Yy])
+            echo "Rebooting..."
+            reboot
+            ;;
+        [Nn])
+            echo "Reboot canceled."
+            ;;
+        *)
+            echo "Invalid choice, please enter Y or N."
+            ;;
+    esac
+}
+
+
+# Docker Sub Menu
+docker_management() {
     while true; do
         clear
-        echo "Docker Sub-Options:"
-        echo "1: Install Docker"
-        echo "2: Install Portainer"
-        echo "3: Install Portainer Agent"
-        echo "4: Install Alist"
-        echo "5: Install Caddy"
-        echo "6: Install Cloudflared"
-        echo "7: Install OVPN admin ui"
-        echo "8: Install Uptime KUMA"
-        echo "9: Install Telegram Backup"
-        echo "10: Install Cloudreve"
-        echo "11: Install Hexo Blog"
-        echo "12: Install Nginx Proxy Manager"
-        echo "13: Install Pihole + Unbound"
-        echo "-----"
-        echo ""
+        echo "▶ Docker Management"
+        echo "------------------------"
+        echo "1. Install/Update Docker Environment"
+        echo "2. View Docker Global Status"
+        echo "3. Clean Up Unused Docker Resources"
+        echo "4. Uninstall Docker Environment"
+        echo "------------------------"
+        echo "0. Return to Main Menu"
+        echo "------------------------"
+        read -p "Enter your choice: " sub_choice
 
-        echo "14: Update Portainer"
-        echo "15: Update Portainer Agent"
-        echo "16: Update Alist"
-        echo "17: Update Caddy"
-        echo "18: Update Cloudflared"
-        echo "19: Uninstall OVPN admin ui"
-        echo "20: Uninstall Uptime KUMA"
-        echo "-----"
-        echo ""
+        case $sub_choice in
+            1)
+                clear
+                install_docker
+                ;;
+            2)
+                clear
+                echo "Docker Version"
+                docker -v
+                docker-compose --version
 
-        echo "01: Uninstall Docker"
-        echo ""
-        echo ""
-
-        echo "107: Restore OVPN admin ui"
-
-        echo "0: Back to main menu"
-
-        docker ps -a
-
-        read -p "Enter your choice: " docker_choice
-
-        case "$docker_choice" in
-            1) install_docker ;;
-            2) install_portainer ;;
-            3) install_portainer_agent ;;
-            4) install_alist ;;
-            5) install_caddy ;;
-            6) install_cloudflared ;;
-            7) install_ovpn_admin ;;
-            8) install_uptimekuma ;;
-            9) telegram_backup ;;
-            10) install_cloudreve ;;
-            11) install_hexo_blog ;;
-            12) install_nginx_proxy_manager ;;
-            13) install_pihole_unbound ;;
-            14) update_portainer ;;
-            15) update_portainer_agent ;;
-            16) update_alist ;;
-            17) update_caddy ;;
-            18) update_cloudflared ;;
-            19) uninstall_ovpn_admin ;;
-            20) uninstall_uptimekuma ;;
-            01) uninstall_docker ;;
-            107) restore_ovpn_admin ;;
-            0) break ;;
+                echo ""
+                echo "Docker Image List"
+                docker image ls
+                echo ""
+                echo "Docker Container List"
+                docker ps -a
+                echo ""
+                echo "Docker Volume List"
+                docker volume ls
+                echo ""
+                echo "Docker Network List"
+                docker network ls
+                echo ""
+                ;;
+            3)
+                clear
+                read -p "$(echo -e "Are you sure you want to clean up unused images, containers, networks, and volumes? (Y/N): ")" choice
+                case "$choice" in
+                    [Yy])
+                        docker system prune -af --volumes
+                        echo "Cleaned up unused Docker resources."
+                        ;;
+                    [Nn])
+                        ;;
+                    *)
+                        echo "Invalid choice, please enter Y or N."
+                        ;;
+                esac
+                ;;
+            4)
+                clear
+                read -p "$(echo -e "Are you sure you want to uninstall the Docker environment? (Y/N): ")" choice
+                case "$choice" in
+                    [Yy])
+                        docker rm $(docker ps -a -q)
+                        docker rmi $(docker images -q)
+                        docker network prune
+                        remove_docker
+                        echo "Docker environment uninstalled."
+                        ;;
+                    [Nn])
+                        ;;
+                    *)
+                        echo "Invalid choice, please enter Y or N."
+                        ;;
+                esac
+                ;;
+            0)
+                break  # Exit the loop, return to the main menu
+                ;;
             *)
-                echo "Invalid option. Please choose a valid option."
+                echo "Invalid input!"
                 ;;
         esac
     done
 }
 
-# Function to quit the script
-quit_script() {
-    echo "Exiting..."
-    exit 0
-}
-
-# Function to install Docker
 install_docker() {
     clear
     echo "Installing Docker..."
@@ -149,989 +514,147 @@ install_docker() {
         echo "Changed directory to $DIR."
     fi
 
+    # Install Docker using the convenience script
     curl -fsSL https://get.docker.com | sh
+    
+    # Start and enable the Docker service
     systemctl start docker
     systemctl enable docker
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
-
-    echo "Docker is installed."
-}
-
-# Function to uninstall Docker
-uninstall_docker() {
-    clear
-    read -p "Are you sure you want to delete Docker？(Y/N): " choice
-    case "$choice" in
-        [Yy])
-            echo "Removing Docker containers and volumes..."
-            docker stop $(docker ps -a -q) &>/dev/null
-            docker rm -f $(docker ps -a -q) &>/dev/null
-            docker rmi $(docker images -q) &>/dev/null
-            docker network prune
-            docker volume prune -f
-
-            echo "Uninstalling Docker..."
-            apt-get remove docker -y
-            apt-get remove docker-ce -y
-            apt-get purge docker-ce -y
-            rm -rf /var/lib/docker
-
-            echo "Docker has been uninstalled."
-            ;;
-        [Nn])
-            ;;
-        *)
-            echo "Invalid answer, please input N or Y."
-            ;;
-    esac
-}
-
-# Function to install Cloudreve
-install_cloudreve() {
-    echo "Installing Cloudreve..."
-
-    mkdir -p /root/containers/cloudreve
-    cd /root/containers/cloudreve
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  cloudreve:
-    image: xavierniu/cloudreve
-    container_name: cloudreve
-    restart: unless-stopped
-    ports:
-      - 5212:5212
-    volumes:
-      - /root/containers/cloudreve/uploads:/cloudreve/uploads
-      - /root/containers/cloudreve/config:/cloudreve/config
-    environment:
-      - TZ=Asia/Shanghai
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to install Hexo Blog
-install_hexo_blog() {
-    echo "Installing Hexo Blog..."
-
-    mkdir -p /root/containers/hexo
-    cd /root/containers/hexo
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  hexo:
-    image: kaixhin/hexo
-    container_name: hexo
-    restart: unless-stopped
-    ports:
-      - 4000:4000
-    volumes:
-      - /root/containers/hexo/blog:/blog
-    command: server -H 0.0.0.0
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to install Nginx Proxy Manager
-install_nginx_proxy_manager() {
-    echo "Installing Nginx Proxy Manager..."
-
-    mkdir -p /root/containers/nginx-proxy-manager
-    cd /root/containers/nginx-proxy-manager
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  app:
-    image: jc21/nginx-proxy-manager:latest
-    container_name: nginx-proxy-manager
-    restart: unless-stopped
-    ports:
-      - 80:80
-      - 81:81
-      - 443:443
-    volumes:
-      - /root/containers/nginx-proxy-manager/data:/data
-      - /root/containers/nginx-proxy-manager/letsencrypt:/etc/letsencrypt
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to install Pihole + Unbound
-install_pihole_unbound() {
-    echo "Installing Pihole + Unbound..."
-
-    mkdir -p /root/containers/pihole
-    cd /root/containers/pihole
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  pihole:
-    image: pihole/pihole:latest
-    container_name: pihole
-    restart: unless-stopped
-    environment:
-      TZ: 'America/New_York'
-      WEBPASSWORD: 'your_password'
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "67:67/udp"
-      - "80:80/tcp"
-      - "443:443/tcp"
-    volumes:
-      - /root/containers/pihole/etc-pihole:/etc/pihole
-      - /root/containers/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to install Portainer
-install_portainer() {
-    echo "Installing Portainer..."
-
-    mkdir -p /root/containers/portainer
-    cd /root/containers/portainer
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /root/containers/portainer/portainer-data:/data
-    ports:
-      - 9000:9000
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to update Portainer
-update_portainer() {
-    echo "Updating Portainer..."
-
-    cd /root/containers/portainer
-
-    docker compose pull
-
-    docker compose down -v && docker compose up -d
-}
-
-# Function to install Portainer Agent
-install_portainer_agent() {
-    echo "Installing Portainer Agent..."
-
-    mkdir -p /root/containers/portainer_agent
-    cd /root/containers/portainer_agent
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  agent:
-    image: portainer/agent:latest
-    container_name: portainer_agent
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/volumes:/var/lib/docker/volumes
-    ports:
-      - 9001:9001
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to update Portainer Agent
-update_portainer_agent() {
-    echo "Updating Portainer Agent..."
-
-    cd /root/containers/portainer_agent
-
-    docker compose pull
-
-    docker compose down -v && docker compose up -d
-}
-
-# Function to install Caddy
-install_caddy() {
-    echo "Installing Caddy..."
-
-    mkdir -p /root/containers/caddy && touch /root/containers/caddy/Caddyfile
-    cd /root/containers/caddy
-
-    read -p "Enter the domain for caddy: " caddy_domain
-    echo "Updating Caddyfile for $caddy_domain..."
-    {
-        echo "{"
-        echo "  email mail@$caddy_domain"
-        echo "}"
-    } >> /root/containers/caddy/Caddyfile
-    echo "Caddyfile updated."
-    docker network create caddy
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  caddy:
-    image: caddy:latest
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - /root/containers/caddy/Caddyfile:/etc/caddy/Caddyfile
-      - /root/containers/caddy/site:/srv
-      - /root/containers/caddy/caddy_data:/data
-      - /root/containers/caddy/caddy_config:/config
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to update Caddy
-update_caddy() {
-    echo "Updating Caddy..."
-
-    cd /root/containers/caddy
-
-    docker compose pull
-
-    docker compose down -v && docker compose up -d
-}
-# Function to install Cloudflared
-install_cloudflared() {
-    echo "Installing Cloudflared..."
-
-    mkdir -p /root/containers/cloudflared
-    cd /root/containers/cloudflared
-    # Check if the Docker network 'portainer' exists
-    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
-
-    # Create the network if it does not exist
-    if [ -z "$network_exists" ]; then
-        echo "Creating Docker network named 'portainer'."
-        docker network create portainer
-    else
-        echo "Docker network named 'portainer' already exists."
-    fi
-
-    read -p "Enter the cloudflared Token: " token
-
-    cat <<EOF > docker-compose.yml
-networks:
-  portainer:
-    external: true
-services:
-  cloudflared:
-    restart: unless-stopped
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    networks:
-      - portainer
-    command:
-      - tunnel
-      - --no-autoupdate
-      - run
-      - --token
-      - $token
-EOF
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to update Cloudflared
-update_cloudflared() {
-    echo "Updating Cloudflared..."
-
-    cloudflared_running=$(docker ps --filter "name=cloudflared" --format "{{.Names}}")
-    # Run install_cloudflared if the Cloudflared container is not running
-    if [ -z "$cloudflared_running" ]; then
-        echo "Cloudflared is not installed."
-        quit_script
-    else
-        echo "Cloudflared is installed. Updating..."
-    fi
-
-    cd /root/containers/cloudflared
-
-    docker compose down
-    docker compose pull
-    docker compose up -d
-}
-
-# Function to uninstall Cloudflared
-uninstall_cloudflared() {
-    echo "Uninstalling Cloudflared..."
-
-    cloudflared_running=$(docker ps --filter "name=cloudflared" --format "{{.Names}}")
-    # Run install_cloudflared if the Cloudflared container is not running
-    if [ -z "$cloudflared_running" ]; then
-        echo "Cloudflared is not installed."
-        quit_script
-    else
-        echo "Cloudflared is installed. Uninstalling..."
-    fi
-
-    cd /root/containers/cloudflared
-
-    docker compose down -v
-}
-
-# Function to install Alist
-install_alist() {
-    echo "Installing Alist..."
-
-    mkdir -p /root/containers/alist
-    cd /root/containers/alist
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  alist:
-    image: 'xhofe/alist:latest'
-    container_name: alist
-    restart: unless-stopped
-    volumes:
-      - /root/containers/alist/data:/opt/alist/data
-    ports:
-      - 5244:5244
-    environment:
-      - PUID=0
-      - PGID=0
-      - UMASK=022
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-
-    docker exec -it alist ./alist admin random
-}
-
-# Function to update Alist
-update_alist() {
-    cd /root/containers/alist/ && docker compose down && docker compose pull && docker compose up -d
-}
-
-# Function to install Telegram Backup
-telegram_backup() {
-    mkdir -p /root/containers/tgbackup
-    mkdir -p /root/containers/tgbackup/data
-    cd /root/containers/tgbackup
-
-    wget --inet4-only https://raw.githubusercontent.com/pandaaxi/mine/main/telegram-backup/docker-compose.yml -O docker-compose.yml
-
-    read -p "Enter the telegram bot token: " tgtoken
-    read -p "Enter the telegram chat ID: " chatID
-
-    cat <<EOF > .env
-TELEGRAM_BOT_TOKEN=$tgtoken
-TELEGRAM_CHAT_ID=$chatID
-BACKUP_DELAY=86400
-EOF
-    # Get VPS IP
-    ip=$(curl -s ip.sb -4)
-
-    # Always add a crontab
-    read -p "Enter the interval for the crontab (e.g., '0 0 * * *' for daily at midnight): " cron_interval
-
-    echo "What do you want to backup:"
-    echo "1: Marzban"
-    echo "2: OVPN admin ui"
-    echo "0: Manual"
-    read -p "Enter your choice: " backup_choice
-
-    if [ "$backup_choice" = "1" ]; then
-        cron_command="zip -r \"/root/containers/tgbackup/data/marzban-${ip}.zip\" \"/root/containers/marzban\""
-    elif [ "$backup_choice" = "2" ]; then
-        cron_command="zip -r \"/root/containers/tgbackup/data/OVPN-admin-${ip}.zip\" \"/root/containers/ovpnadmin\""
-    elif [ "$backup_choice" = "0" ]; then
-        read -p "Enter the command for the crontab: " cron_command
-    else
-        echo "Invalid choice. Exiting."
-        exit 1
-    fi
-    (crontab -l 2>/dev/null; echo "$cron_interval $cron_command") | crontab -
-    echo "Crontab added: $cron_interval $cron_command"
-
-    $cron_command
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to install Uptime Kuma
-install_uptimekuma() {
-    echo "Installing Uptime Kuma..."
-
-    mkdir -p /root/containers/uptimekuma
-    cd /root/containers/uptimekuma
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    container_name: uptime-kuma
-    restart: unless-stopped
-    ports:
-      - 3001:3001
-    volumes:
-      - /root/containers/uptimekuma/data:/app/data
-EOF
-
-    echo "Created docker-compose.yml"
-    docker compose up -d
-}
-
-# Function to update Uptime Kuma
-update_uptimekuma() {
-    cd /root/containers/uptimekuma/ && docker compose down && docker compose pull && docker compose up -d
-}
-# Function to install OVPN Admin UI
-install_ovpn_admin() {
-    echo "Installing OpenVPN Admin GUI..."
-
-    mkdir -p /root/containers/ovpnadmin
-    cd /root/containers/ovpnadmin
-    # Check if the Docker network 'portainer' exists
-    network_exists=$(docker network ls | grep portainer | awk '{print $2}')
-
-    # Create the network if it does not exist
-    if [ -z "$network_exists" ]; then
-        echo "Creating Docker network named 'portainer'."
-        docker network create portainer
-    else
-        echo "Docker network named 'portainer' already exists."
-    fi
-    touch /root/containers/ovpnadmin/server.conf
-    touch /root/containers/ovpnadmin/fw-rules.sh
-    touch /root/containers/ovpnadmin/client.conf
-
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  openvpn-ui:
-    container_name: openvpn-ui
-    image: d3vilh/openvpn-ui:latest
-    restart: unless-stopped
-    environment:
-      - OPENVPN_ADMIN_USERNAME=95a4c264-75c6-40d2-9aca-a738f765dd83
-      - OPENVPN_ADMIN_PASSWORD=8e5a9b2a-e5c7-4db0-96b3-31a0290b2bd6
-    privileged: true
-    ports:
-      - 8080:8080
-    volumes:
-      - /root/containers/ovpnadmin:/etc/openvpn
-      - /root/containers/ovpnadmin/db:/opt/openvpn-ui/db
-      - /root/containers/ovpnadmin/pki:/usr/share/easy-rsa/pki
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-  openvpn-as:
-    image: d3vilh/openvpn-server:latest
-    privileged: true
-    container_name: openvpn
-    restart: unless-stopped
-    environment:
-      TRUST_SUB: 10.0.70.0/24
-      GUEST_SUB: 10.0.71.0/24
-      HOME_SUB: 192.168.88.0/24
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - 1194:1194/udp
-      - 2080:2080
-    volumes:
-      - /root/containers/ovpnadmin/:/etc/openvpn
-      - /root/containers/ovpnadmin/pki:/etc/openvpn/pki
-      - /root/containers/ovpnadmin/clients:/etc/openvpn/clients
-      - /root/containers/ovpnadmin/config:/etc/openvpn/config
-      - /root/containers/ovpnadmin/staticclients:/etc/openvpn/staticclients
-      - /root/containers/ovpnadmin/log:/var/log/openvpn
-      - /root/containers/ovpnadmin/fw-rules.sh:/opt/app/fw-rules.sh
-      - /root/containers/ovpnadmin/server.conf:/etc/openvpn/server.conf
-EOF
-    echo "Created docker-compose.yml"
-    docker compose up -d
-
-    curl ip.sb -4
-}
-
-# Function to update OVPN Admin UI
-update_ovpn_admin() {
-    cd /root/containers/ovpnadmin/ && docker compose down && docker compose pull && docker compose up -d
-}
-
-# Function to restore OVPN Admin UI
-restore_ovpn_admin() {
-    echo "Restoring OpenVPN Admin GUI..."
-    cd
-
-    rsync -av /home/ubuntu/ovpnadmin/ /root/containers/ovpnadmin/
-
-    cd /root/containers/ovpnadmin/ && docker compose down -v && docker compose up -d
-}
-
-# Function to uninstall OVPN Admin UI
-uninstall_ovpn_admin() {
-    echo "Uninstalling OVPN Admin UI..."
-
-    cd /root/containers/ovpnadmin
-    docker compose down -v
-
-    rm -rf /root/containers/ovpnadmin
-    echo "OVPN Admin UI uninstalled."
-}
-
-# Function to install Marzban Panel
-install_marzban_panel() {
-    echo "Installing Marzban Panel..."
-
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
-        if [ "$docker_choice" == "y" ]; then
-            install_docker
-        else
-            echo "Docker is not installed. Please install Docker first."
-            return
-        fi
-    fi
-
-    # Install Xray for ARM
-    if [ "$(arch)" == "aarch64" ]; then
-        apt install unzip
-        rm -r /root/containers/marzban/xray-core/
-        mkdir -p /root/containers/marzban/xray-core/
-        cd /root/containers/marzban/xray-core/
-        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip -4
-        unzip Xray-linux-arm64-v8a.zip
-        rm Xray-linux-arm64-v8a.zip
-        cd
-    fi
-
-    # Install Xray for AMD
-    if [ "$(arch)" == "x86_64" ]; then
-        apt install unzip
-        rm -r /root/containers/marzban/xray-core/
-        mkdir -p /root/containers/marzban/xray-core/
-        cd /root/containers/marzban/xray-core/
-        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -4
-        unzip Xray-linux-64.zip
-        rm Xray-linux-64.zip
-        cd
-    fi
     
-    sudo wget -N -P /root/containers/marzban/templates/subscription/  https://raw.githubusercontent.com/vblyrpv074/marzban-sub-clone/main/index.html
-    sudo wget -N -P /root/containers/marzban/  https://raw.githubusercontent.com/vblyrpv074/marzban-sub-clone/main/index.html
+    # Download and install Docker Compose
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
 
-    touch /root/containers/marzban/.env
-    touch /root/containers/marzban/db.sqlite3
-    touch /root/containers/marzban/xray_config.json
-
-    cd /root/containers/marzban/
-    cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  marzban:
-    image: gozargah/marzban:latest
-    container_name: marzban
-    restart: always
-    env_file: .env
-    ports:
-      - 8000:8000/tcp
-      - 443:443/tcp
-      - 65342:65342/tcp
-    volumes:
-      - /root/containers/marzban/:/root/containers/marzban/
-EOF
-
-    cat <<EOF > .env
-UVICORN_HOST="0.0.0.0"
-UVICORN_PORT=8000
-
-SUDO_USERNAME="1625b6aa-2815-40ec-a218-11e6c0262e52"
-SUDO_PASSWORD="4ae3db97-9ff0-4305-a68d-adbc6e0961ec"
-
-XRAY_JSON="/root/containers/marzban/xray_config.json"
-XRAY_EXECUTABLE_PATH="/root/containers/marzban/xray-core/xray"
-
-SQLALCHEMY_DATABASE_URL="sqlite:////root/containers/marzban/db.sqlite3"
-CUSTOM_TEMPLATES_DIRECTORY="/root/containers/marzban/templates/"
-SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
-EOF
-
-    cd /root/containers/marzban/ && docker compose up -d
+    echo "Docker installation completed."
 }
 
-# Function to update Marzban Panel
-update_marzban_panel() {
-    echo "Updating Marzban Panel..."
+remove_docker() {
+    echo "Uninstalling Docker..."
+    # Stop Docker services
+    systemctl stop docker
 
-    cd /root/containers/marzban/ && docker compose down && docker compose pull && docker compose up -d
+    # Remove Docker packages
+    apt-get purge -y docker-ce docker-ce-cli containerd.io
 
-    # Update Xray component
-    if [ "$(arch)" == "aarch64" ]; then
-        apt install unzip -y
-        rm -r /var/lib/marzban/xray-core/
-        mkdir -p /var/lib/marzban/xray-core/
-        cd /var/lib/marzban/xray-core/
-        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip -4
-        unzip Xray-linux-arm64-v8a.zip
-        rm Xray-linux-arm64-v8a.zip
-        cd -
-    elif [ "$(arch)" == "x86_64" ]; then
-        apt install unzip -y
-        rm -r /var/lib/marzban/xray-core/
-        mkdir -p /var/lib/marzban/xray-core/
-        cd /var/lib/marzban/xray-core/
-        wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -4
-        unzip Xray-linux-64.zip
-        rm Xray-linux-64.zip
-        cd -
-    fi
+    # Remove Docker Compose
+    rm -f /usr/local/bin/docker-compose
 
-    cd /root/containers/marzban/ && docker compose restart
+    # Remove Docker data
+    rm -rf /var/lib/docker
+    rm -rf /var/lib/containerd
 
-    echo "Marzban Panel has been updated."
+    # Clean up residual configuration files
+    apt-get autoremove -y
+    apt-get clean
+
+    echo "Docker has been successfully uninstalled."
 }
 
-# Function to install Marzban Node
-install_marzban_node() {
-    echo "Installing Marzban Node..."
-    if ! command -v docker &> /dev/null; then
-        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
-        if [ "$docker_choice" == "y" ]; then
-            install_docker
-        else
-            echo "Docker is not installed. Please install Docker first."
-        fi
-    else
 
-        cd /root/containers/
-        apt-get update
-
-        git clone https://github.com/Gozargah/Marzban-node
-        cd /root/containers/Marzban-node
-
-        rm "docker-compose.yml"
-
-        cat <<EOF > docker-compose.yml
-version: "3"
-services:
-  marzban-node:
-    image: gozargah/marzban-node:latest
-    restart: always
-    ports:
-      - 62050:62050/tcp
-      - 62051:62051/tcp
-      - 65342:65342/tcp
-      - 443:443/tcp
-    environment:
-      SERVICE_PORT: 62050
-      XRAY_API_PORT: 62051
-      SSL_CLIENT_CERT_FILE: "/var/lib/marzban-node/ssl_client_cert.pem"
-    volumes:
-      - /root/containers/Marzban-node:/var/lib/marzban-node
-EOF
-        echo "Created new docker-compose.yml"
-
-        docker compose up -d
-
-        echo "Please paste the SSL certificate content below (press Ctrl+D when finished):"
-        ssl_cert_path=$(</dev/stdin)
-
-        rm "/root/containers/Marzban-node/ssl_client_cert.pem"
-
-        echo "$ssl_cert_path" > /root/containers/Marzban-node/ssl_client_cert.pem
-
-        echo "SSL certificate updated at /root/containers/Marzban-node/ssl_client_cert.pem"
-
-        docker compose down -v
-        docker compose up -d
-    fi
-}
-
-# Function to update Marzban Node
-update_marzban_node() {
-    echo "Updating Marzban Node..."
-
-    cd /root/containers/Marzban-node
-
-    git pull origin master
-
-    docker compose pull
-
-    docker compose down
-    docker compose up -d
-
-    echo "Marzban Node has been updated."
-}
-
-# Function to uninstall Marzban Panel
-uninstall_marzban_panel() {
-    echo "Uninstalling Marzban Panel..."
-    cd && marzban uninstall
-}
-
-# Function to uninstall Marzban Node
-uninstall_marzban_node() {
-    echo "Uninstalling Marzban Node..."
-    cd /root/containers/Marzban-node && docker compose down -v && cd && rm -rf /root/containers/Marzban-node && rm -r /var/lib/marzban-node
-}
-
-# Function to uninstall all Marzban components
-uninstall_all_marzban() {
-    echo "Uninstalling all Marzban components..."
-    uninstall_marzban_panel
-    uninstall_marzban_node
-}
-# Function to manage OpenVPN AS
-openvpn_as_submenu() {
+# WARP Management Submenu
+warp_management() {
     while true; do
         clear
-        echo "OpenVPN AS Menu:"
-        echo "1: Install OpenVPN AS"
-        echo "2: Uninstall OpenVPN AS"
-        echo "3: Backup OpenVPN AS"
-        echo "4: Restore OpenVPN AS"
-        echo "0: Back"
+        echo "▶ WARP Management"
+        echo "------------------------"
+        echo "1. Install WARP Client"
+        echo "2. Check WARP Status"
+        echo "3. Enable WARP"
+        echo "4. Disable WARP"
+        echo "5. Uninstall WARP Client"
+        echo "------------------------"
+        echo "0. Return to Main Menu"
+        echo "------------------------"
+        read -p "Enter your choice: " sub_choice
 
-        read -p "Enter your choice: " choice
-
-        case $choice in
-            1) install_openvpn_as ;;
-            2) remove_openvpn_as ;;
-            3) backup_openvpn_as ;;
-            4) restore_openvpn_as_backup ;;
-            0) break ;;
-            *) echo "Invalid option. Please choose a valid option." ;;
+        case $sub_choice in
+            1)
+                install_warp
+                ;;
+            2)
+                check_warp_status
+                ;;
+            3)
+                enable_warp
+                ;;
+            4)
+                disable_warp
+                ;;
+            5)
+                uninstall_warp
+                ;;
+            0)
+                break  # Exit the loop, return to the main menu
+                ;;
+            *)
+                echo "Invalid input!"
+                ;;
         esac
-
-        read -p "Press any key to return to the OpenVPN AS menu or 'q' to go back to the main menu." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            break
-        fi
     done
 }
 
-# Function to install OpenVPN AS
-install_openvpn_as() {
-    echo "Installing OpenVPN Access Server..."
+install_warp() {
+    clear
+    echo "Installing WARP Client..."
+    
+    # Add the Cloudflare WARP repository and GPG key
+    apt update
+    apt install -y curl gnupg
+    curl -s https://pkg.cloudflareclient.com/pubkey.gpg | apt-key add -
+    echo "deb [arch=amd64] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflare-client.list
 
-    # Check the architecture
-    if [ "$(uname -m)" == "aarch64" ]; then
-        ARCHITECTURE="arm64"
-    else
-        ARCHITECTURE="amd64"
-    fi
+    # Update package list and install WARP
+    apt update
+    apt install -y cloudflare-warp
 
-    # Install dependencies
-    apt install -y bridge-utils dmidecode iptables iproute2 libc6 libffi7 libgcc-s1 liblz4-1 liblzo2-2 libmariadb3 libpcap0.8 libssl3 libstdc++6 libsasl2-2 libsqlite3-0 net-tools python3-pkg-resources python3-migrate python3-sqlalchemy python3-mysqldb python3-ldap3 sqlite3 zlib1g python3-netaddr python3-arrow python3-lxml python3-constantly python3-hyperlink python3-automat python3-service-identity python3-cffi python3-defusedxml
+    # Register and connect WARP client
+    warp-cli register
+    warp-cli connect
 
-    # Download and install OpenVPN AS
-    wget https://gitlab.com/jtfu/JOWALL/-/raw/main/OVPN12.12.1/openvpn-as_2.12.1-bc070def-Ubuntu22_"$ARCHITECTURE".deb
-    wget https://gitlab.com/jtfu/JOWALL/-/raw/main/OVPN12.12.1/openvpn-as-bundled-clients-latest.deb
-    dpkg -i openvpn-as-bundled-clients-latest.deb openvpn-as_2.12.1-bc070def-Ubuntu22_"$ARCHITECTURE".deb
-
-    # Download and install pyovpn
-    wget https://gitlab.com/jtfu/JOWALL/-/raw/main/OVPN12.12.1/pyovpn-2.0-py3.10.egg
-    cp pyovpn-2.0-py3.10.egg /usr/local/openvpn_as/lib/python/
-
-    # Restart OpenVPN AS
-    systemctl restart openvpnas
-
-    echo "OpenVPN Access Server has been installed."
+    echo "WARP Client installation completed."
 }
 
-# Function to remove OpenVPN AS
-remove_openvpn_as() {
-    echo "Removing OpenVPN Access Server..."
-
-    # Stop OpenVPN AS service
-    sudo systemctl stop openvpnas.service
-
-    # Remove OpenVPN AS
-    sudo apt-get remove openvpn-as
-
-    # Remove OpenVPN AS directory and user
-    sudo rm -rf /usr/local/openvpn_as/
-    sudo userdel openvpn
-    sudo groupdel openvpn
-
-    # Remove log and temporary directories
-    sudo rm -rf /var/log/openvpnas/
-    sudo rm -rf /tmp/openvpnas/
-
-    echo "OpenVPN Access Server has been removed."
+check_warp_status() {
+    clear
+    echo "Checking WARP Status..."
+    
+    # Display WARP client status
+    warp-cli status
+    echo ""
 }
 
-# Function to backup OpenVPN AS
-backup_openvpn_as() {
-    echo "Backing up OpenVPN Access Server..."
-
-    # Install SQLite if not installed
-    which apt > /dev/null 2>&1 && apt -y install sqlite3
-    which yum > /dev/null 2>&1 && yum -y install sqlite
-
-    # Backup OpenVPN AS databases and configuration
-    cd /usr/local/openvpn_as/etc/db
-    [ -e config.db ] && sqlite3 config.db .dump > ../../config.db.bak
-    [ -e certs.db ] && sqlite3 certs.db .dump > ../../certs.db.bak
-    [ -e userprop.db ] && sqlite3 userprop.db .dump > ../../userprop.db.bak
-    [ -e log.db ] && sqlite3 log.db .dump > ../../log.db.bak
-    [ -e config_local.db ] && sqlite3 config_local.db .dump > ../../config_local.db.bak
-    [ -e cluster.db ] && sqlite3 cluster.db .dump > ../../cluster.db.bak
-    [ -e clusterdb.db ] && sqlite3 clusterdb.db .dump > ../../clusterdb.db.bak
-    [ -e notification.db ] && sqlite3 notification.db .dump > ../../notification.db.bak
-
-    # Backup configuration file
-    cp ../as.conf ../../as.conf.bak
-
-    # Create a backup directory
-    mkdir -p /home/ubuntu/dbbackup && cp /usr/local/openvpn_as/*.bak /home/ubuntu/db/
-
-    echo "OpenVPN Access Server has been backed up."
+enable_warp() {
+    clear
+    echo "Enabling WARP..."
+    
+    # Connect to WARP
+    warp-cli connect
+    echo "WARP has been enabled."
 }
 
-# Function to restore OpenVPN AS backup
-restore_openvpn_as_backup() {
-    echo "Restoring OpenVPN Access Server backup..."
-
-    # Copy backup files to OpenVPN AS directory
-    cp /home/ubuntu/dbbackup/*.bak /usr/local/openvpn_as/
-
-    # Stop OpenVPN AS service
-    service openvpnas stop
-
-    # Install SQLite if not installed
-    which apt > /dev/null 2>&1 && apt -y install sqlite3
-    which yum > /dev/null 2>&1 && yum -y install sqlite
-
-    # Restore OpenVPN AS databases and configuration
-    cd /usr/local/openvpn_as/etc/db
-    [ -e ../../config.db.bak ] && rm config.db; sqlite3 <../../config.db.bak config.db
-    [ -e ../../certs.db.bak ] && rm certs.db; sqlite3 <../../certs.db.bak certs.db
-    [ -e ../../userprop.db.bak ] && rm userprop.db; sqlite3 <../../userprop.db.bak userprop.db
-    [ -e ../../log.db.bak ] && rm log.db; sqlite3 <../../log.db.bak log.db
-    [ -e ../../config_local.db.bak ] && rm config_local.db; sqlite3 <../../config_local.db.bak config_local.db
-    [ -e ../../cluster.db.bak ] && rm cluster.db; sqlite3 <../../cluster.db.bak cluster.db
-    [ -e ../../clusterdb.db.bak ] && rm clusterdb.db; sqlite3 <../../clusterdb.db.bak clusterdb.db
-    [ -e ../../notification.db.bak ] && rm notification.db; sqlite3 <../../notification.db.bak notification.db
-
-    # Restore configuration file
-    [ -e ../../as.conf.bak ] && cp ../../as.conf.bak ../as.conf
-
-    # Start OpenVPN AS service
-    service openvpnas start
-
-    echo "OpenVPN Access Server has been restored from backup."
+disable_warp() {
+    clear
+    echo "Disabling WARP..."
+    
+    # Disconnect from WARP
+    warp-cli disconnect
+    echo "WARP has been disabled."
 }
 
-# SSL certificate management submenu
-ssl_cert_management() {
-  local choice
+uninstall_warp() {
+    clear
+    echo "Uninstalling WARP Client..."
 
-  # Consume any remaining input in the buffer
-  read -r -t 0.1 -n 10000
+    # Disconnect and remove the WARP client
+    warp-cli disconnect
+    apt remove -y cloudflare-warp
+    apt autoremove -y
+    rm -f /etc/apt/sources.list.d/cloudflare-client.list
 
-  # Main menu
-  echo "SSL Certificate Management Menu"
-  echo "1: Register SSL for Marzban (using /var/lib/marzban/certs)"
-  echo "2: Register SSL for x-ui (using /root/certs)"
-  echo "3: Show SSL Certificate Summary"
-  read -p "Select an option (1-3): " choice
-
-  case $choice in
-    1)
-      read -p "Enter the domain for Marzban SSL registration: " domain
-      mkdir -p /var/lib/marzban/certs
-      register_ssl "$domain" "/var/lib/marzban/certs"
-      ;;
-    2)
-      read -p "Enter the domain for x-ui SSL registration: " domain
-      mkdir -p /root/certs
-      register_ssl "$domain" "/root/certs"
-      ;;
-    3)
-      echo "SSL Certificates Summary:"
-      echo "Marzban: $(ls /var/lib/marzban/certs/ | grep -c '.cert.crt') certificates registered"
-      echo "x-ui: $(ls /root/certs/ | grep -c '.cert.crt') certificates registered"
-      ;;
-    *)
-      echo "Invalid choice. Please select a valid option."
-      ;;
-  esac
+    echo "WARP Client has been uninstalled."
 }
 
-# Function to register SSL certificates with embedded random string generation
-register_ssl() {
-  local domain=$1
-  local certs_dir=$2
-
-  # Generate a random string of specified length
-  local length=5
-  local characters="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-  local random_string=""
-
-  for ((i = 0; i < length; i++)); do
-    rand_index=$((RANDOM % ${#characters}))
-    random_string+=${characters:$rand_index:1}
-  done
-
-  local email_address="${random_string}@gmail.com"
-
-  cd ~
-  curl https://get.acme.sh | sh
-  ~/.acme.sh/acme.sh --register-account -m "$email_address" --issue -d "$domain" --standalone --key-file "$certs_dir/${domain}.private.key" --fullchain-file "$certs_dir/${domain}.cert.crt" --force
-}
-
-# Function to display SSL certificate (Node)
-display_ssl_certificate() {
-    echo "Displaying SSL certificate (Node)..."
-    cat /var/lib/marzban-node/ssl_cert.pem
-}
-
-# Function to update the script from the provided link
-update_script() {
-    echo "Updating the script..."
-
-    # Download the updated script
-    updated_script_url="https://raw.githubusercontent.com/vblyrpv074/mine/main/me.sh"
-    if curl -fsSL -o me.sh "$updated_script_url"; then
-        chmod +x me.sh
-        echo "Script updated successfully."
-        exit 0  # Exit after updating to avoid any issues
-    else
-        echo "Failed to update the script. Please check the provided link."
-    fi
-}
-
-# Function to update repositories
-update_repositories() {
-    apt update && apt upgrade -y && apt autoremove && apt autoclean
-}
-
-# Submenu for wgcf
+# Sub-menu for wgcf
 wgcf() {
     while true; do
         echo "Choose an option:"
@@ -1145,7 +668,7 @@ wgcf() {
 
         case $choice in
             1)
-                generate
+                generate_wgcf_config
                 ;;
             2)
                 check_status
@@ -1167,7 +690,7 @@ wgcf() {
 }
 
 # Function to generate configuration
-generate() {
+generate_wgcf_config() {
     apt install jq -y
     wgcf_file="/root/warpgen/wgcf"
 
@@ -1192,29 +715,19 @@ generate() {
     else
         echo "wgcf file already exists. Skipping download."
     fi
-
     cd /root/warpgen/
 
-    rm -f wgcf-account.toml
+    rm -fr wgcf-account.toml
     ./wgcf register
     sleep 2 # Adding a delay of 2 seconds
-
     cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
-
     read -p "Enter the new WGCF license key: " new_key
     WGCF_LICENSE_KEY="$new_key" ./wgcf update
     sleep 2
     cat wgcf-account.toml # Displaying the contents of wgcf-account.toml
-
     # Fetching device_id and access_token from wgcf-account.toml
     device_id=$(grep -oP "device_id = '\K[^']+" wgcf-account.toml)
     access_token=$(grep -oP "access_token = '\K[^']+" wgcf-account.toml)
-
-    # Check if device_id and access_token were extracted
-    if [ -z "$device_id" ] || [ -z "$access_token" ]; then
-        echo "Error: device_id or access_token not found in wgcf-account.toml."
-        exit 1
-    fi
 
     # Fetching information using curl command
     response=$(curl --request GET "https://api.cloudflareclient.com/v0a2158/reg/$device_id" \
@@ -1228,24 +741,11 @@ generate() {
     # Extracting client_id from the response
     client_id=$(echo "$response" | jq -r '.config.client_id')
 
-    # Check if client_id is extracted successfully
-    if [ -z "$client_id" ]; then
-        echo "Error: client_id not found in the response."
-        exit 1
-    fi
-
     # Converting client_id into array format [14, 116, 111]
-    client_id_array=$(echo "$client_id" | base64 -d 2>/dev/null | xxd -p | fold -w2 | while read HEX; do printf '%d ' "0x${HEX}"; done | awk '{print "["$1", "$2", "$3"]"}')
-
-    # Check if client_id_array is generated successfully
-    if [ -z "$client_id_array" ]; then
-        echo "Error: client_id_array generation failed."
-        exit 1
-    fi
-
-    echo "client_id_array: $client_id_array"
+    client_id_array=$(echo "$client_id" | base64 -d | xxd -p | fold -w2 | while read HEX; do printf '%d ' "0x${HEX}"; done | awk '{print "["$1", "$2", "$3"]"}')
 
     ./wgcf generate
+
     sleep 2 # Adding a delay of 2 seconds
 
     # Fetching PrivateKey and Address from wgcf-profile.conf
@@ -1255,13 +755,6 @@ generate() {
     # Extracting individual IPv4 and IPv6 addresses
     ipv4=$(echo "$addresses" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+')
     ipv6=$(echo "$addresses" | grep -Eo '([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}/[0-9]+')
-
-    # Check if both IPv4 and IPv6 addresses are extracted
-    if [ -z "$ipv4" ] || [ -z "$ipv6" ]; then
-        echo "Error: Unable to extract IPv4 or IPv6 addresses."
-        exit 1
-    fi
-
     # Creating wireguard.json file
     cat > wireguard.json <<EOF
 {
@@ -1294,13 +787,13 @@ EOF
 
 # Function to check status
 check_status() {
-    cd /home/ubuntu/warpgen/
+    cd && cd /root/warpgen/
     ./wgcf status
 }
 
 # Function to trace
 trace() {
-    cd /home/ubuntu/warpgen/
+    cd && cd /root/warpgen/
     ./wgcf trace
 }
 
@@ -1326,458 +819,24 @@ check_reserved() {
 
     # Converting client_id into array format [14, 116, 111]
     client_id_array=$(echo "$client_id" | base64 -d | xxd -p | fold -w2 | while read HEX; do printf '%d ' "0x${HEX}"; done | awk '{print "["$1", "$2", "$3"]"}')
-    client_id_array
+    echo $client_id_array
 }
 
-# Function to manage Fail2Ban for SSHD
-fail2bansshd() {
-    # Check if Fail2Ban is installed, and install it if not
-    if ! command -v fail2ban-server &> /dev/null; then
-        echo "Installing Fail2Ban..."
-        apt update -y
-        apt install -y fail2ban
-    fi
+update_script() {
+    echo "Updating the script..."
 
-    # Start Fail2Ban and enable it on boot
-    systemctl start fail2ban
-    systemctl enable fail2ban
-
-    # Copy the Fail2Ban configuration to a local file
-    cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
-
-    # Remove existing SSH-related configuration files
-    rm -rf /etc/fail2ban/jail.d/*
-    
-    echo '[sshd]
-    enabled = true
-    mode   = normal
-    backend = systemd' >> /etc/fail2ban/jail.d/sshd.local
-
-    # Restart Fail2Ban to apply the configuration changes
-    systemctl restart fail2ban
-
-    # Display Fail2Ban status and SSHD status in Fail2Ban
-    echo "Fail2Ban Status:"
-    systemctl status fail2ban
-
-    echo "Fail2Ban Status for SSHD:"
-    fail2ban-client status sshd
-}
-
-# Function to display Fail2Ban status
-fail2banstatus() {
-    # Display Fail2Ban status and SSHD status in Fail2Ban
-    echo "Fail2Ban Status:"
-    systemctl status fail2ban
-
-    echo "Fail2Ban Client Status:"
-    fail2ban-client status
-
-    echo "Fail2Ban Status for SSHD:"
-    fail2ban-client status sshd
-}
-
-# Function to configure UFW security
-configure_ufw_security() {
-    echo "Configuring UFW (Uncomplicated Firewall) security..."
-
-    # Check if UFW is installed
-    if ! command -v ufw &> /dev/null; then
-        read -p "UFW is not available! Do you want to install? (y/n) " ufw_choice
-        if [ "$ufw_choice" == "y" ]; then
-            install_ufw
-        else
-            echo "UFW is not installed. Please install UFW first."
-            return
-        fi
-    fi
-
-    while true; do
-        echo "UFW Security Sub-Options:"
-        echo "1: Allow port for Marzban"
-        echo "2: Allow port for Wordpress"
-        echo "3: Allow port for OpenVPN"
-        echo "0: Back to main menu"
-        echo "00: Reset UFW"
-
-        read -p "Enter your choice: " sub_choice
-
-        case $sub_choice in
-            1) allow_port_for_marzban ;;
-            2) allow_port_for_wordpress ;;
-            3) allow_port_for_openvpn ;;
-            0) break ;;
-            00) reset_ufw ;;
-            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-        esac
-    done
-}
-
-# Function to install UFW (Uncomplicated Firewall)
-install_ufw() {
-    echo "Installing UFW (Uncomplicated Firewall)..."
-    apt-get update
-    apt-get install ufw -y
-    ufw default deny incoming
-    ufw default allow outgoing
-    ufw allow 22/tcp
-    echo "UFW has been installed, 22/tcp and default policies set."
-}
-
-# Function to allow ports for Marzban
-allow_port_for_marzban() {
-    echo "Allowing ports for Marzban..."
-    ufw enable  # Enable UFW if it's not already enabled
-
-    # Prompt the user to input ports
-    echo "Please enter the ports you want to allow, separated by spaces:"
-    read -r -a ports_to_allow
-
-    # Iterate over each port and allow it
-    for port in "${ports_to_allow[@]}"; do
-        ufw allow "$port"/tcp
-    done
-
-    # Reload UFW to apply changes
-    sudo ufw reload
-    # Display the status of UFW to check if the ports are allowed
-    ufw status verbose
-    echo "Ports have been allowed."
-}
-
-# Function to allow ports for Wordpress
-allow_port_for_wordpress() {
-    echo "Allowing ports for Wordpress..."
-    ufw allow 80/tcp
-    ufw allow 443/tcp
-    echo "Ports 80 and 443 have been allowed for Wordpress."
-}
-
-# Function to allow ports for OpenVPN
-allow_port_for_openvpn() {
-    echo "Allowing ports for OpenVPN..."
-    ufw allow 1194/udp
-    echo "Port 1194 has been allowed for OpenVPN."
-}
-
-# Function to reset UFW to default settings
-reset_ufw() {
-    echo "Resetting UFW to default settings..."
-    ufw reset
-    ufw disable
-    echo "UFW has been reset and disabled."
-}
-# Sub-menu for Minecraft PE Server
-minecraft_pe_server_submenu() {
-    while true; do
-        clear  
-        echo "Minecraft PE Server Sub-Options:"
-        echo "1: Install Minecraft Server"
-        echo "2: Edit Port and Difficulty"
-        echo "3: Enable Coordinates"
-        echo "4: Remove Minecraft Server"
-        echo "0: Back to main menu"
-
-        read -p "Enter your choice: " sub_choice
-
-        case $sub_choice in
-            1) install_minecraft_pe_server ;;
-            2) edit_minecraft_pe_server ;;
-            3) enable_coordinates ;;
-            4) remove_minecraft_pe_server ;;
-            0) break ;;
-            *) echo "Invalid sub-option. Please choose a valid sub-option." ;;
-        esac
-        read -p "Press any key to return to the menu or 'q' to quit." -n 1 -s input
-        if [ "$input" == "q" ]; then
-            echo "Exiting..."
-            exit 0
-        fi
-    done
-}
-
-# Function to install Minecraft PE Server
-install_minecraft_pe_server() {
-    
-    echo "Installing Minecraft PE Server..."
-
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
-        if [ "$docker_choice" == "y" ]; then
-            install_docker
-        else
-            echo "Docker is not installed. Please install Docker first."
-            return
-        fi
-    fi
-
-    # Ask if the user wants to modify server configuration
-    read -p "Do you want to modify the server configuration? (y/n, default: n): " modify_config_choice
-
-    if [ "$modify_config_choice" == "y" ]; then
-        # Ask for the server name (container name)
-        read -p "Enter the server name (container name, e.g., mc01, leave blank for default): " server_name
-        server_name=${server_name:-"mc01"}
-
-        # Ask for the server port
-        read -p "Enter the server port (leave blank for default, default: 20001): " server_port
-        server_port=${server_port:-20001}
-
-        # Ask for the difficulty level
-        read -p "Enter the difficulty level (easy/normal/hard, leave blank for default, default: normal): " difficulty
-        difficulty=${difficulty:-"normal"}
-
-        # Ask for the level seed
-        read -p "Enter the level seed (leave blank for none): " level_seed
+    # Download the updated script
+    updated_script_url="https://raw.githubusercontent.com/vblyrpv074/mine/main/panda.sh"
+    if curl -fsSL -o me.sh "$updated_script_url"; then
+        chmod +x me.sh
+        echo "Script updated successfully."
+        exit 0  # Exit after updating to avoid any issues
     else
-        server_name="mc01"
-        server_port="20001"
-        difficulty="normal"
-        level_seed=""
-    fi
-
-    # Create a directory for the Minecraft server
-    mkdir -p "/root/containers/minecraft/$server_name"
-
-    # Create a Docker Compose configuration for the Minecraft server
-    cat <<EOF > "/root/containers/minecraft/$server_name/docker-compose.yml"
-version: "3"
-services:
-  minecraft-bedrock-server:
-    image: itzg/minecraft-bedrock-server
-    container_name: $server_name
-    environment:
-      - EULA=TRUE
-      - SERVER_PORT=$server_port
-      - DIFFICULTY=$difficulty
-EOF
-
-    # Add the level seed if provided
-    if [ -n "$level_seed" ]; then
-        echo "      - LEVEL_SEED=$level_seed" >> "/root/containers/minecraft/$server_name/docker-compose.yml"
-    fi
-
-    # Add the rest of the configuration
-    cat <<EOF >> "/root/containers/minecraft/$server_name/docker-compose.yml"
-    ports:
-      - "$server_port:$server_port/udp"
-    volumes:
-      - $server_name:/data
-
-volumes:
-  $server_name:
-EOF
-
-    # Start the Minecraft server
-    cd "/root/containers/minecraft/$server_name" && docker-compose up -d
-
-    # Print server information
-    echo "Minecraft PE Server '$server_name' has been installed."
-    echo "Server Port: $server_port"
-    echo "Difficulty: $difficulty"
-    [ -n "$level_seed" ] && echo "Level Seed: $level_seed"
-}
-
-# Function to remove a Minecraft PE Server
-remove_minecraft_pe_server() {
-
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        echo "Docker is not installed. Please install Docker first."
-        return
-    fi
-
-    # List the available Minecraft servers based on the image name
-    server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
-
-    if [ -z "$server_list" ]; then
-        echo "No Minecraft PE Servers are currently running."
-        return
-    fi
-
-    echo "Running Minecraft PE Servers:"
-    echo "$server_list"
-
-    # Ask for the server name (container name) or provide an option to remove all
-    read -p "Enter the server name to remove or 'all' to remove all servers (leave blank to cancel): " server_name
-
-    if [ -z "$server_name" ]; then
-        echo "No servers selected for removal."
-        return
-    fi
-
-    if [ "$server_name" == "all" ]; then
-        for server in $server_list; do
-            # Prompt to back up game data before removal
-            read -p "Do you want to back up game data for '$server'? (y/n): " backup_choice
-            if [ "$backup_choice" == "y" ]; then
-                # Create a backup of the game data
-                mkdir -p "/home/mc_data/$server"
-                docker run --rm -v "$server:/backup" -v "/home/mc_data/$server:/data" alpine tar -cf /backup/game_data.tar -C /backup .
-            fi
-
-            # Remove the server using Docker Compose
-            cd "/root/containers/minecraft/$server"
-            docker-compose down -v
-
-            # Remove the Docker Compose configuration
-            rm -f "/root/containers/minecraft/$server/docker-compose.yml"
-
-            # Remove the server folder
-            rm -rf "/root/containers/minecraft/$server"
-        done
-
-        # Remove all server data volumes
-        docker volume rm $(docker volume ls -qf name=mc*)
-        
-        echo "All Minecraft PE Servers have been removed."
-    else
-        # Prompt to back up game data before removal
-        read -p "Do you want to back up game data for '$server_name'? (y/n): " backup_choice
-        if [ "$backup_choice" == "y" ]; then
-            # Create a backup of the game data
-            mkdir -p "/home/mc_data/$server_name"
-            docker run --rm -v "$server_name:/backup" -v "/home/mc_data/$server_name:/data" alpine tar -cf /backup/game_data.tar -C /backup .
-        fi
-
-        # Remove the server using Docker Compose
-        cd "/root/containers/minecraft/$server_name"
-        docker-compose down
-
-        # Remove the Docker Compose configuration
-        rm -f "/root/containers/minecraft/$server_name/docker-compose.yml"
-
-        # Remove the server folder
-        rm -rf "/root/containers/minecraft/$server_name"
-
-        # Remove the server data volume
-        docker volume rm "$server_name"
-        
-        echo "Minecraft PE Server '$server_name' has been removed."
+        echo "Failed to update the script. Please check the provided link."
     fi
 }
 
-
-# Function to edit port and difficulty of the Minecraft PE Server
-edit_minecraft_pe_server() {
-    echo "Editing Minecraft PE Server Port and Difficulty..."
-
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        read -p "Docker is not available! Do you want to install? (y/n) " docker_choice
-        if [ "$docker_choice" == "y" ]; then
-            install_docker
-        else
-            echo "Docker is not installed. Please install Docker first."
-            return
-        fi
-    fi
-
-    # List the available Minecraft servers based on the image name
-    server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
-
-    if [ -z "$server_list" ]; then
-        echo "No Minecraft PE Servers are currently running."
-        return
-    fi
-
-    # Prompt for server selection if there are multiple servers
-    if [ $(echo "$server_list" | wc -l) -gt 1 ]; then
-        echo "Select the server to edit port and difficulty:"
-        select server_name in $server_list; do
-            [ -n "$server_name" ] && break
-        done
-    else
-        server_name="$server_list"
-    fi
-
-    # Get the current server directory
-    server_directory="/root/containers/minecraft/$server_name"
-
-    # Stop the Minecraft server using Docker Compose
-    (cd "$server_directory" && docker compose down)
-
-    # Ask for a new server port
-    read -p "Enter a new server port (leave blank to keep the current port): " new_server_port
-
-    # Ask for a new difficulty level
-    read -p "Enter a new difficulty level (easy/normal/hard, leave blank to keep the current difficulty): " new_difficulty
-
-    # Get the current difficulty from the Docker Compose file
-    difficulty=$(grep -oP "(?<=DIFFICULTY=)\w+" "$server_directory/docker-compose.yml")
-
-    # Edit the Docker Compose file for the selected server
-    sed -i -e "/container_name: $server_name/,/DIFFICULTY=/s/SERVER_PORT=[0-9]*/SERVER_PORT=${new_server_port:-$server_port}/" \
-           -e "/container_name: $server_name/,/LEVEL_SEED=/s/DIFFICULTY=$difficulty/DIFFICULTY=${new_difficulty:-$difficulty}/" \
-           "$server_directory/docker-compose.yml"
-
-    # Restart the selected Minecraft server using Docker Compose
-    (cd "$server_directory" && docker compose up -d)
-
-    echo "Minecraft PE Server configuration has been updated."
+quit_script() {
+    echo "Exiting..."
+    exit 0
 }
-
-# Function to enable coordinates in a Minecraft PE Server
-enable_coordinates() {
-    echo "Enabling Coordinates in Minecraft PE Server..."
-
-    # List the available Minecraft servers based on the image name
-    server_list=$(docker ps --format "{{.Names}} {{.Image}}" | awk '$2 ~ /itzg\/minecraft-bedrock-server/ {print $1}')
-
-    if [ -z "$server_list" ]; then
-    echo "No Minecraft PE Servers are currently running."
-    return
-    fi
-
-    # Prompt for server selection if there are multiple servers
-    if [ $(echo "$server_list" | wc -l) -gt 1 ]; then
-        echo "Select the server to enable coordinates:"
-        select server_name in $server_list; do
-            [ -n "$server_name" ] && break
-        done
-    else
-        server_name="$server_list"
-    fi
-
-    # Enable coordinates in the selected server
-    docker exec $server_name send-command gamerule showcoordinates true
-
-    echo "Coordinates have been enabled in the selected Minecraft PE Server."
-}
-
-# Function to display system information
-system_information() {
-    echo "Fetching system information..."
-
-    # Display system information using lsb_release, if available
-    if command -v lsb_release &> /dev/null; then
-        lsb_release -a
-    else
-        echo "lsb_release not found, displaying /etc/os-release instead."
-        cat /etc/os-release
-    fi
-
-    # Display kernel version
-    uname -r
-
-    # Display CPU information
-    echo "CPU Information:"
-    lscpu
-
-    # Display memory information
-    echo "Memory Information:"
-    free -h
-
-    # Display disk usage
-    echo "Disk Usage:"
-    df -h
-
-    # Display network interfaces
-    echo "Network Interfaces:"
-    ip addr
-}
-
-
-# Start the main menu
-main_menu
