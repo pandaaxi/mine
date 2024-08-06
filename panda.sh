@@ -233,6 +233,7 @@ system_clean() {
 }
 
 # Sub menu for System Tools
+system_tools() {
 while true; do
     clear
     echo "▶ System Tools"
@@ -299,6 +300,7 @@ while true; do
     esac
     break_end
 done
+}
 
 set_dns() {
     # Check if the machine has an IPv6 address
@@ -840,6 +842,5 @@ quit_script() {
     echo "Exiting..."
     exit 0
 }
-
 
 main_menu
