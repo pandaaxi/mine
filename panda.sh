@@ -840,3 +840,6 @@ quit_script() {
     echo "Exiting..."
     exit 0
 }
+
+
+main_menu
