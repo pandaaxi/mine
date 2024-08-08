@@ -6,16 +6,17 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.0.3"
+        echo "V0.0.5"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
         echo "3. System Clean"
         echo "------------------------"
-        echo "4. System Tools"
-        echo "5. Docker Management"
-        echo "6. WARP Management"
-        echo "7. WGCF Management"
+        echo "4. System Tools ▶"
+        echo "5. Docker Management ▶"
+        echo "6. WARP Management ▶"
+        echo "7. WGCF Management ▶"
+        echo "8. BBR Management ▶"
         echo "------------------------"
         echo "00. Script Update"
         echo "0. Quit"
@@ -43,6 +44,9 @@ main_menu() {
                 ;;
             7)
                 wgcf
+                ;;
+            8)
+                bbr_management
                 ;;
             00)
                 update_script
@@ -884,6 +888,16 @@ update_script() {
     else
         echo "Failed to update the script. Please check the provided link."
     fi
+}
+
+# bbr management
+bbr_management() {
+    while true; do
+        install wget
+        wget --no-check-certificate -O tcpx.sh https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcpx.sh
+        chmod +x tcpx.sh
+        ./tcpx.sh
+    done
 }
 
 quit_script() {
