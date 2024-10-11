@@ -17,8 +17,10 @@ main_menu() {
         echo "6. WARP Management ▶"
         echo "7. WGCF Management ▶"
         echo "8. BBR Management ▶"
+        echo "9. Realm Management ▶"
         echo "------------------------"
         echo "00. Script Update"
+        echo "99. Uninstall Panda"
         echo "0. Quit"
         echo "------------------------"
         read -p "Enter your choice: " choice
@@ -48,8 +50,14 @@ main_menu() {
             8)
                 bbr_management
                 ;;
+            9)
+                realm_management
+                ;;
             00)
                 update_script
+                ;;
+            99)
+                uninstall_panda
                 ;;
             0)
                 quit_script
@@ -61,6 +69,29 @@ main_menu() {
         read -p "Press any key to continue..." key
     done
 }
+
+# Function to create a symbolic link to panda.sh
+install_panda() {
+    script_path=$(readlink -f "$0")
+    ln -sf "$script_path" /usr/local/bin/panda
+    chmod +x /usr/local/bin/panda
+    echo "Panda has been installed as 'panda'. You can now run it by typing 'panda'."
+}
+
+# Function to uninstall the symbolic link
+uninstall_panda() {
+    if [ -f /usr/local/bin/panda ]; then
+        rm /usr/local/bin/panda
+        echo "Panda has been uninstalled. You can no longer call it via 'panda'."
+    else
+        echo "Panda is not installed."
+    fi
+}
+
+# Check if the script is being run for the first time and install it
+if [[ "$0" == "./panda.sh" ]]; then
+    install_panda
+fi
 
 # Non Manual Function
 output_status() {
@@ -79,7 +110,6 @@ output_status() {
 
             printf("总接收: %.2f %s\n总发送: %.2f %s\n", rx_total, rx_units, tx_total, tx_units);
         }' /proc/net/dev)
-
 }
 
 ip_address() {
@@ -455,7 +485,6 @@ disable_swap() {
     echo "Swap memory disabled."
 }
 
-
 reboot_server() {
     read -p "$(echo -e "${huang}Do you want to reboot the server now? (Y/N): ${bai}")" rboot
     case "$rboot" in
@@ -471,7 +500,6 @@ reboot_server() {
             ;;
     esac
 }
-
 
 # Docker Sub Menu
 docker_management() {
@@ -512,6 +540,7 @@ docker_management() {
                 echo "Docker Network List"
                 docker network ls
                 echo ""
+                read -p "Press any key to continue..." key
                 ;;
             3)
                 clear
@@ -603,7 +632,6 @@ remove_docker() {
 
     echo "Docker has been successfully uninstalled."
 }
-
 
 # WARP Management Submenu
 warp_management() {
@@ -909,9 +937,24 @@ bbr_management() {
     read -p "Press any key to continue..." key
 }
 
-quit_script() {
-    echo "Exiting..."
-    exit 0
+# Function for Realm Management
+realm_management() {
+    # Install necessary dependencies if needed
+    if ! command -v wget &> /dev/null; then
+        apt-get update && apt-get install -y wget
+    fi
+
+    # Check if realm.sh is already available
+    if [ ! -f realm.sh ]; then
+        # Download and execute realm.sh script
+        wget -4 --no-check-certificate -O realm.sh https://github.com/pandaaxi/mine/raw/refs/heads/main/realm.sh
+        chmod +x realm.sh
+    fi
+
+    ./realm.sh
+
+    echo "Realm Management completed. Returning to Main Menu."
+    read -p "Press any key to continue..." key
 }
 
 main_menu
