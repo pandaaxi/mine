@@ -6,7 +6,7 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.1.1"
+        echo "V0.1.2"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
@@ -71,7 +71,7 @@ main_menu() {
 }
 
 # Function to quit the script
-iquit_script() {
+quit_script() {
     echo "Quitting the script. Goodbye!"
     exit 0
 }
