@@ -6,7 +6,7 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.0.5"
+        echo "V0.1.0"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
@@ -898,7 +898,7 @@ bbr_management() {
     fi
 
     # Download and execute tcpx.sh script
-    wget --no-check-certificate -O tcpx.sh https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcpx.sh
+    wget -4 --no-check-certificate -O tcpx.sh https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcpx.sh
     chmod +x tcpx.sh
     ./tcpx.sh
 
