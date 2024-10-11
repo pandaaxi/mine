@@ -892,12 +892,21 @@ update_script() {
 
 # bbr management
 bbr_management() {
-    while true; do
-        install wget
-        wget --no-check-certificate -O tcpx.sh https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcpx.sh
-        chmod +x tcpx.sh
-        ./tcpx.sh
-    done
+    # Install necessary dependencies if needed
+    if ! command -v wget &> /dev/null; then
+        apt-get update && apt-get install -y wget
+    fi
+
+    # Download and execute tcpx.sh script
+    wget --no-check-certificate -O tcpx.sh https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcpx.sh
+    chmod +x tcpx.sh
+    ./tcpx.sh
+
+    # Clean up after running the script
+    rm -f tcpx.sh
+
+    echo "BBR Management completed. Returning to Main Menu."
+    read -p "Press any key to continue..." key
 }
 
 quit_script() {
