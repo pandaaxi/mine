@@ -32,12 +32,16 @@ download_realm() {
         echo "Error: Failed to download realm for architecture $arch."
         exit 1
     fi
-    tar -xvf realm.tar.gz
-    chmod +x realm
+    mkdir -p /root/realm
+    tar -xvf realm.tar.gz -C /root/realm && rm realm.tar.gz
+    if [ ! -f "/root/realm/realm" ]; then
+        echo "Error: realm binary not found after extraction."
+        exit 1
+    fi
+    chmod +x /root/realm/realm
     # Move realm binary to /usr/local/bin for global access
-    mv realm /usr/local/bin/
+    mv /root/realm/realm /usr/local/bin/
 }
-
 
 # Check if realm is installed
 if [ -f "/usr/local/bin/realm" ]; then
@@ -83,8 +87,6 @@ show_menu() {
 
 # Function to deploy realm
 deploy_realm() {
-    mkdir -p /root/realm
-    cd /root/realm
     download_realm
     # Create service file
     echo "[Unit]
@@ -97,12 +99,12 @@ Type=simple
 User=root
 Restart=on-failure
 RestartSec=5s
-DynamicUser=true
 WorkingDirectory=/root/realm
 ExecStart=/usr/local/bin/realm -c /root/realm/config.toml
 
 [Install]
 WantedBy=multi-user.target" > /etc/systemd/system/realm.service
+
     systemctl daemon-reload
 
     # Create config.toml if it doesn't exist
@@ -121,26 +123,10 @@ use_udp = true
         echo "[network] 配置已存在，跳过添加。"
     fi
 
-    
     # Update realm status
     realm_status="已安装"
     realm_status_color="\033[0;32m" # 绿色
     echo "部署完成。"
-}
-
-# Function to uninstall realm
-uninstall_realm() {
-    systemctl stop realm
-    systemctl disable realm
-    rm -rf /etc/systemd/system/realm.service
-    systemctl daemon-reload
-    rm -rf /root/realm
-    rm -f /usr/local/bin/realm
-        sed -i '/realm/d' /etc/crontab
-    echo "realm已被卸载。"
-    # Update realm status
-    realm_status="未安装"
-    realm_status_color="\033[0;31m" # 红色
 }
 
 # Function to add forwarding rule
@@ -162,21 +148,7 @@ remote = \"$ip:$port\"" >> /root/realm/config.toml
     done
 }
 
-# Function to start realm service
-start_service() {
-    sudo systemctl unmask realm.service
-    sudo systemctl daemon-reload
-    sudo systemctl restart realm.service
-    sudo systemctl enable realm.service
-    echo "realm服务已启动并设置为开机自启。"
-}
-
-# Function to stop realm service
-stop_service() {
-    systemctl stop realm
-    echo "realm服务已停止。"
-}
-
+# Function to show all forwarding rules
 show_all_conf() {
     echo "当前转发规则："
     local IFS=$'\n' # 设置IFS仅以换行符作为分隔符
@@ -203,7 +175,7 @@ show_all_conf() {
     done
 }
 
-# 删除转发规则的函数
+# Function to delete forwarding rule
 delete_forward() {
     echo "当前转发规则："
     local IFS=$'\n' # 设置IFS仅以换行符作为分隔符
@@ -274,8 +246,37 @@ delete_forward() {
     echo "转发规则及其备注已删除。"
 }
 
+# Function to start realm service
+start_service() {
+    sudo systemctl unmask realm.service
+    sudo systemctl daemon-reload
+    sudo systemctl restart realm.service
+    sudo systemctl enable realm.service
+    echo "realm服务已启动并设置为开机自启。"
+}
 
-# 定时任务
+# Function to stop realm service
+stop_service() {
+    systemctl stop realm
+    echo "realm服务已停止。"
+}
+
+# Function to uninstall realm
+uninstall_realm() {
+    systemctl stop realm
+    systemctl disable realm
+    rm -rf /etc/systemd/system/realm.service
+    systemctl daemon-reload
+    rm -rf /root/realm
+    rm -f /usr/local/bin/realm
+    sed -i '/realm/d' /etc/crontab
+    echo "realm已被卸载。"
+    # Update realm status
+    realm_status="未安装"
+    realm_status_color="\033[0;31m" # 红色
+}
+
+# Function to handle cron restart tasks
 cron_restart() {
   echo -e "------------------------------------------------------------------"
   echo -e "realm定时重启任务: "
