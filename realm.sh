@@ -40,7 +40,7 @@ download_realm() {
 
 # Create a symbolic link for the script to make it callable as 'realm'
 create_symlink() {
-    ln -sf $(realpath $0) /usr/local/bin/realm_script
+    ln -sf $(realpath $0) /usr/local/bin/realm_manager
 }
 
 # Check if realm is installed
@@ -142,7 +142,7 @@ uninstall_realm() {
     systemctl daemon-reload
     rm -rf /root/realm
     rm -f /usr/local/bin/realm
-    rm -f /usr/local/bin/realm_script
+    rm -f /usr/local/bin/realm_manager
     sed -i '/realm/d' /etc/crontab
     echo "realm已被卸载。"
     # Update realm status
