@@ -6,7 +6,7 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.1.0"
+        echo "V0.1.1"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
@@ -68,6 +68,34 @@ main_menu() {
         esac
         read -p "Press any key to continue..." key
     done
+}
+
+# Function to quit the script
+iquit_script() {
+    echo "Quitting the script. Goodbye!"
+    exit 0
+}
+
+# Function to handle post-submenu actions
+break_end() {
+    echo "Returning to the previous menu..."
+    read -p "Press any key to continue..." key
+}
+
+# Function to open necessary iptables ports after SSH port change
+iptables_open() {
+    new_port=$1
+    echo "Updating iptables to allow new SSH port: $new_port"
+    
+    # Allow the new SSH port in iptables (IPv4 and IPv6)
+    iptables -A INPUT -p tcp --dport $new_port -j ACCEPT
+    ip6tables -A INPUT -p tcp --dport $new_port -j ACCEPT
+    
+    # Save iptables changes to ensure they persist after reboot
+    iptables-save > /etc/iptables/rules.v4
+    ip6tables-save > /etc/iptables/rules.v6
+    
+    echo "iptables rules updated to allow SSH on port $new_port."
 }
 
 # Function to create a symbolic link to panda.sh
