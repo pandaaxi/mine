@@ -41,6 +41,8 @@ download_realm() {
 # Create a symbolic link for the script to make it callable as 'realm'
 create_symlink() {
     ln -sf $(realpath $0) /usr/local/bin/realm_manager
+    chmod +x /usr/local/bin/realm_manager
+    export PATH=/usr/local/bin:$PATH
 }
 
 # Check if realm is installed
