@@ -6,7 +6,7 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.2.1"
+        echo "V0.2.2"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
@@ -418,64 +418,61 @@ while true; do
 done
 }
 
-# Function to test DNS response time
-function test_dns() {
-    local dns_server=$1
+# Function to test DNS response time and update resolv.conf with the best DNS group
+set_dns() {
     local domain="google.com"
-    
+
     # Check if dig is installed
     if ! command -v dig &> /dev/null; then
         echo "dig command is not available. Installing dnsutils..."
         apt update && apt install -y dnsutils
     fi
 
-    local response_time=$(dig @$dns_server $domain +stats | grep "Query time:" | awk '{print $4}')
-    echo $response_time
-}
+    # DNS servers to test
+    local ipv4_dns_servers=("1.1.1.1" "1.0.0.1" "8.8.8.8" "8.8.4.4")
+    local ipv6_dns_servers=("2606:4700:4700::1111" "2606:4700:4700::1001" "2001:4860:4860::8888" "2001:4860:4860::8844")
 
-# DNS servers to test
-ipv4_dns_servers=("1.1.1.1" "1.0.0.1" "8.8.8.8" "8.8.4.4")
-ipv6_dns_servers=("2606:4700:4700::1111" "2606:4700:4700::1001" "2001:4860:4860::8888" "2001:4860:4860::8844")
+    # Initialize variables for best DNS
+    local best_ipv4_time=100000  # Start with a very high value
+    local best_ipv4_group=()
 
-# Initialize variables for best DNS
-best_ipv4_dns=""
-best_ipv4_time=100000  # Start with a very high value
-best_ipv4_group=()
+    local best_ipv6_time=100000  # Start with a very high value
+    local best_ipv6_group=()
 
-best_ipv6_dns=""
-best_ipv6_time=100000  # Start with a very high value
-best_ipv6_group=()
+    # Function to test DNS response time
+    local test_dns() {
+        local dns_server=$1
+        local response_time=$(dig @$dns_server $domain +stats | grep "Query time:" | awk '{print $4}')
+        echo $response_time
+    }
 
-# Test each IPv4 DNS server
-for dns in "${ipv4_dns_servers[@]}"; do
-    response_time=$(test_dns $dns)
-    echo "IPv4 DNS: $dns, Response Time: ${response_time} ms"
+    # Test each IPv4 DNS server
+    for dns in "${ipv4_dns_servers[@]}"; do
+        response_time=$(test_dns $dns)
+        echo "IPv4 DNS: $dns, Response Time: ${response_time} ms"
 
-    if [[ $response_time -lt $best_ipv4_time ]]; then
-        best_ipv4_time=$response_time
-        best_ipv4_dns=$dns
-        best_ipv4_group=($dns)
-    elif [[ $response_time -eq $best_ipv4_time ]]; then
-        best_ipv4_group+=($dns)
-    fi
-done
+        if [[ $response_time -lt $best_ipv4_time ]]; then
+            best_ipv4_time=$response_time
+            best_ipv4_group=($dns)
+        elif [[ $response_time -eq $best_ipv4_time ]]; then
+            best_ipv4_group+=($dns)
+        fi
+    done
 
-# Test each IPv6 DNS server
-for dns in "${ipv6_dns_servers[@]}"; do
-    response_time=$(test_dns $dns)
-    echo "IPv6 DNS: $dns, Response Time: ${response_time} ms"
+    # Test each IPv6 DNS server
+    for dns in "${ipv6_dns_servers[@]}"; do
+        response_time=$(test_dns $dns)
+        echo "IPv6 DNS: $dns, Response Time: ${response_time} ms"
 
-    if [[ $response_time -lt $best_ipv6_time ]]; then
-        best_ipv6_time=$response_time
-        best_ipv6_dns=$dns
-        best_ipv6_group=($dns)
-    elif [[ $response_time -eq $best_ipv6_time ]]; then
-        best_ipv6_group+=($dns)
-    fi
-done
+        if [[ $response_time -lt $best_ipv6_time ]]; then
+            best_ipv6_time=$response_time
+            best_ipv6_group=($dns)
+        elif [[ $response_time -eq $best_ipv6_time ]]; then
+            best_ipv6_group+=($dns)
+        fi
+    done
 
-# Set DNS function to update resolv.conf with the best DNS group
-set_dns() {
+    # Update resolv.conf with the best DNS group
     echo "Best IPv4 DNS servers are: ${best_ipv4_group[@]} with response time: ${best_ipv4_time} ms"
     echo "Best IPv6 DNS servers are: ${best_ipv6_group[@]} with response time: ${best_ipv6_time} ms"
 
@@ -495,6 +492,11 @@ set_dns() {
     # Confirmation message
     echo "DNS settings updated successfully."
 }
+
+# Call the function to test and set the best DNS
+set_dns
+
+
 set_ssh_port() {
     new_port=$1
 
