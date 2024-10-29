@@ -81,6 +81,8 @@ show_menu() {
     echo "8. 定时重启任务"
     echo "9. 退出脚本"
     echo "========================"
+    show_all_conf
+    echo "========================"
     echo -e "realm 状态：${realm_status_color}${realm_status}\033[0m"
     echo -n "realm 转发状态："
     check_realm_service_status
@@ -133,6 +135,9 @@ use_udp = true
 # Function to add forwarding rule
 add_forward() {
     while true; do
+        echo "========================"
+        show_all_conf
+        echo "========================"
         read -p "请输入本地监听端口: " local_port
         read -p "请输入需要转发的IP: " ip
         read -p "请输入需要转发端口: " port
