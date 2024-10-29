@@ -493,10 +493,6 @@ set_dns() {
     echo "DNS settings updated successfully."
 }
 
-# Call the function to test and set the best DNS
-set_dns
-
-
 set_ssh_port() {
     new_port=$1
 
