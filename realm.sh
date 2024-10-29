@@ -68,7 +68,8 @@ show_menu() {
     clear
     echo "欢迎使用realm一键转发脚本"
     echo "realm版本v2.6.2"
-    echo "修改by：Azimi"
+    echo "修改by：panda"
+    echo "v0.0.1"
     echo "========================"
     echo "1. 安装realm"
     echo "2. 添加realm转发"
