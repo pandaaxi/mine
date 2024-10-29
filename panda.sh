@@ -6,7 +6,7 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.2.0"
+        echo "V0.2.1"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
@@ -177,6 +177,9 @@ system_info_query() {
     fi
 
     cpu_cores=$(nproc)
+    # Extract DNS information
+    dns_ipv4=$(grep -E "^nameserver[[:space:]]+([0-9]{1,3}\.){3}[0-9]{1,3}" /etc/resolv.conf | awk '{print $2}' | paste -sd ", " -)
+    dns_ipv6=$(grep -E "^nameserver[[:space:]]+([a-fA-F0-9:]+)" /etc/resolv.conf | awk '{print $2}' | paste -sd ", " -)
 
     mem_info=$(free -b | awk 'NR==2{printf "%.2f/%.2f MB (%.2f%%)", $3/1024/1024, $2/1024/1024, $3*100/$2}')
 
@@ -256,6 +259,9 @@ system_info_query() {
     echo "------------------------"
     echo "Public IPv4 Address: $ipv4_address"
     echo "Public IPv6 Address: $ipv6_address"
+    echo "------------------------"
+    echo "DNS IPv4: $dns_ipv4"
+    echo "DNS IPv6: $dns_ipv6"
     echo "------------------------"
     echo "Geographic Location: $country $city"
     echo "System Timezone: $timezone"
