@@ -178,8 +178,8 @@ system_info_query() {
 
     cpu_cores=$(nproc)
     # Extract DNS information
-    dns_ipv4=$(grep -E "^nameserver[[:space:]]+([0-9]{1,3}\.){3}[0-9]{1,3}" /etc/resolv.conf | awk '{print $2}' | paste -sd ", " -)
-    dns_ipv6=$(grep -E "^nameserver[[:space:]]+([a-fA-F0-9:]+)" /etc/resolv.conf | awk '{print $2}' | paste -sd ", " -)
+    dns_ipv4=$(grep -E "^nameserver[[:space:]]+([0-9]{1,3}\.){3}[0-9]{1,3}$" /etc/resolv.conf | awk '{print $2}' | paste -sd ", " -)
+    dns_ipv6=$(grep -E "^nameserver[[:space:]]+([a-fA-F0-9:]+)$" /etc/resolv.conf | awk '{print $2}' | paste -sd ", " -)
 
     mem_info=$(free -b | awk 'NR==2{printf "%.2f/%.2f MB (%.2f%%)", $3/1024/1024, $2/1024/1024, $3*100/$2}')
 
