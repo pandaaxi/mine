@@ -6,7 +6,7 @@ main_menu() {
     while true; do
         clear
         echo "▶ Main Menu"
-        echo "V0.2.2"
+        echo "V0.2.5"
         echo "------------------------"
         echo "1. System Information Query"
         echo "2. System Update"
@@ -440,7 +440,7 @@ set_dns() {
     local best_ipv6_group=()
 
     # Function to test DNS response time
-    local test_dns() {
+    test_dns() {
         local dns_server=$1
         local response_time=$(dig @$dns_server $domain +stats | grep "Query time:" | awk '{print $4}')
         echo $response_time
