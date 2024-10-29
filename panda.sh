@@ -412,27 +412,83 @@ while true; do
 done
 }
 
-set_dns() {
-    # Check if the machine has an IPv6 address
-    ipv6_available=0
-    if [[ $(ip -6 addr | grep -c "inet6") -gt 0 ]]; then
-        ipv6_available=1
+# Function to test DNS response time
+function test_dns() {
+    local dns_server=$1
+    local domain="google.com"
+    
+    # Check if dig is installed
+    if ! command -v dig &> /dev/null; then
+        echo "dig command is not available. Installing dnsutils..."
+        apt update && apt install -y dnsutils
     fi
 
-    echo "nameserver $dns1_ipv4" > /etc/resolv.conf
-    echo "nameserver $dns2_ipv4" >> /etc/resolv.conf
-
-    if [[ $ipv6_available -eq 1 ]]; then
-        echo "nameserver $dns1_ipv6" >> /etc/resolv.conf
-        echo "nameserver $dns2_ipv6" >> /etc/resolv.conf
-    fi
-
-    echo "DNS addresses updated"
-    echo "------------------------"
-    cat /etc/resolv.conf
-    echo "------------------------"
+    local response_time=$(dig @$dns_server $domain +stats | grep "Query time:" | awk '{print $4}')
+    echo $response_time
 }
 
+# DNS servers to test
+ipv4_dns_servers=("1.1.1.1" "1.0.0.1" "8.8.8.8" "8.8.4.4")
+ipv6_dns_servers=("2606:4700:4700::1111" "2606:4700:4700::1001" "2001:4860:4860::8888" "2001:4860:4860::8844")
+
+# Initialize variables for best DNS
+best_ipv4_dns=""
+best_ipv4_time=100000  # Start with a very high value
+best_ipv4_group=()
+
+best_ipv6_dns=""
+best_ipv6_time=100000  # Start with a very high value
+best_ipv6_group=()
+
+# Test each IPv4 DNS server
+for dns in "${ipv4_dns_servers[@]}"; do
+    response_time=$(test_dns $dns)
+    echo "IPv4 DNS: $dns, Response Time: ${response_time} ms"
+
+    if [[ $response_time -lt $best_ipv4_time ]]; then
+        best_ipv4_time=$response_time
+        best_ipv4_dns=$dns
+        best_ipv4_group=($dns)
+    elif [[ $response_time -eq $best_ipv4_time ]]; then
+        best_ipv4_group+=($dns)
+    fi
+done
+
+# Test each IPv6 DNS server
+for dns in "${ipv6_dns_servers[@]}"; do
+    response_time=$(test_dns $dns)
+    echo "IPv6 DNS: $dns, Response Time: ${response_time} ms"
+
+    if [[ $response_time -lt $best_ipv6_time ]]; then
+        best_ipv6_time=$response_time
+        best_ipv6_dns=$dns
+        best_ipv6_group=($dns)
+    elif [[ $response_time -eq $best_ipv6_time ]]; then
+        best_ipv6_group+=($dns)
+    fi
+done
+
+# Set DNS function to update resolv.conf with the best DNS group
+set_dns() {
+    echo "Best IPv4 DNS servers are: ${best_ipv4_group[@]} with response time: ${best_ipv4_time} ms"
+    echo "Best IPv6 DNS servers are: ${best_ipv6_group[@]} with response time: ${best_ipv6_time} ms"
+
+    if [[ ${#best_ipv4_group[@]} -gt 0 ]] || [[ ${#best_ipv6_group[@]} -gt 0 ]]; then
+        echo "Updating /etc/resolv.conf with DNS:"
+        {
+            for dns in "${best_ipv4_group[@]}"; do
+                echo "nameserver $dns"
+            done
+
+            for dns in "${best_ipv6_group[@]}"; do
+                echo "nameserver $dns"
+            done
+        } > /etc/resolv.conf
+    fi
+
+    # Confirmation message
+    echo "DNS settings updated successfully."
+}
 set_ssh_port() {
     new_port=$1
 
