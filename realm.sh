@@ -26,7 +26,7 @@ get_architecture() {
 # Function to download the appropriate realm file based on architecture
 download_realm() {
     arch=$(get_architecture)
-    url="https://github.com/zhboner/realm/releases/download/v2.6.3/realm-$arch.tar.gz"
+    url="https://github.com/zhboner/realm/releases/latest/download/realm-$arch.tar.gz"
     wget -O realm.tar.gz "$url"
     if [ $? -ne 0 ]; then
         echo "Error: Failed to download realm for architecture $arch."
